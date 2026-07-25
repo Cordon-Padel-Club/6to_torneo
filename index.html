@@ -22,7 +22,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
   --red:#cf2027; --red-osc:#8f1218;
 
   /* colores rotativos de categoría — conviven con la paleta 60/30/10 */
-  --cat0:#cf2027; --cat1:#2f6f9e; --cat2:#c98a12; --cat3:#4c8a5a;
+  --cat0:#1596a3; --cat1:#2f6f9e; --cat2:#c98a12; --cat3:#4c8a5a;
   --cat4:#7a5aa6; --cat5:#b5563c; --cat6:#3d8f8a; --cat7:#a23e6b;
 
   --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
@@ -178,8 +178,8 @@ table.pos td .p{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:
 /* clasificados (vista jugador) */
 .clasif{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0 0;padding:8px 9px;background:var(--pared);border:1px solid var(--linea);border-left:3px solid var(--red);}
 .clasif-lbl{font-family:var(--mono);font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--tinta-suave);margin-right:2px;}
-.qtag{display:inline-flex;align-items:center;gap:5px;font-size:13px;background:#fff;border:1px solid var(--linea);border-left:3px solid var(--cc,var(--red));padding:3px 8px 3px 7px;}
-.qtag b{font-family:var(--mono);font-size:10px;color:var(--cc,var(--red));}
+.qtag{display:inline-flex;align-items:center;gap:5px;font-size:13px;background:#fff;border:1px solid var(--linea);padding:3px 8px 3px 7px;}
+.qtag b{font-family:var(--mono);font-size:10px;color:var(--tinta-suave);}
 
 /* ---------- LLAVE ---------- */
 .fase-lbl{font-family:var(--mono);font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--tinta-suave);margin:14px 0 6px;display:flex;align-items:center;gap:9px;}
@@ -386,6 +386,12 @@ body[data-solo="1"] .rolbar{display:none;}
 /* jugador: sin marcadores de sección salvo el "•" de Ahora en cancha */
 body[data-rol="cliente"] .sec-head .n{display:none;}
 body[data-rol="cliente"] #ahora .sec-head .n{display:inline-block;}
+/* jugador: sin identificadores numéricos de pareja (#XX) */
+body[data-rol="cliente"] .side .num{display:none;}
+body[data-rol="cliente"] .pos td .p{display:none;}
+body[data-rol="cliente"] .vs .n{display:none;}
+/* marca de ganador / jugado */
+.wg{color:var(--red);font-weight:700;}
 </style>
 </head>
 <body data-rol="org">
@@ -527,7 +533,7 @@ body[data-rol="cliente"] #ahora .sec-head .n{display:inline-block;}
       <p class="note"><b>Fase final.</b> Se calcula sola: clasificados = grupos × cupos + repechaje. Si el número no es potencia de 2, el validador te lo marca y te dice cuánto falta o sobra.</p>
       <p class="note"><b>Guardado.</b> Se guarda solo si el visor lo permite. Antes de cerrar, usá Exportar y quedate con el texto.</p>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v0.8 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v0.9 · Julio 2026</p>
   </div>
 </footer>
 
@@ -823,7 +829,7 @@ function nombreCorto(cat, lado){
   const id = resolver(cat, lado);
   if(id !== null && id !== undefined){
     const v = S.nom[claveNom(cat,id)];
-    return (v && v.trim()) ? v.trim() : '#'+pad(numGlobal(cat,id));
+    return (v && v.trim()) ? v.trim() : (ROL === 'cliente' ? 'Pareja '+numGlobal(cat,id) : '#'+pad(numGlobal(cat,id)));
   }
   // dependencia sin resolver: forma abreviada (Gan A1, 1º A, etc.)
   if(lado.t === 'g') return 'Gan '+lado.v;
@@ -1301,7 +1307,7 @@ function renderCat(){
   let html = '';
   for(const gr of a.grs){
     html += `<div class="card"><div class="card-head"><h3>Grupo ${gr.g}</h3>
-      <span class="tagm">${gr.p.length} parejas · #${pad(numGlobal(cat,gr.p[0]))}–#${pad(numGlobal(cat,gr.p[gr.p.length-1]))}</span></div>
+      <span class="tagm">${gr.p.length} parejas${ROL === 'org' ? ' · #'+pad(numGlobal(cat,gr.p[0]))+'–#'+pad(numGlobal(cat,gr.p[gr.p.length-1])) : ''}</span></div>
       <div class="card-body">${partidosGrupo(cat,gr).map(m => renderPartido(cat,m)).join('')}${renderTablaPos(cat,gr,a)}</div></div>`;
   }
   const llave = partidosLlave(cat);
@@ -1428,7 +1434,7 @@ function renderGrilla(){
         const mia = miPareja && [x.m.a,x.m.b].some(l => miPareja === x.cat.id+':'+resolver(x.cat,l));
         tds += `<td><div class="slot${mia ? ' moving' : ''}" style="--cc:${colorCat(x.cat)}">
           <span class="c${x.m.gr ? '' : ' f'}">${esc(x.cat.nom)}</span>
-          <span class="m"><b>${esc(x.m.id)}</b> · ${esc(x.m.fase)}${ev.estado === 'ok' ? ' ✓' : ''}</span>
+          <span class="m"><b>${esc(x.m.id)}</b> · ${esc(x.m.fase)}${ev.estado === 'ok' ? ' <b class="wg">G</b>' : ''}</span>
           <span class="duo">${rotuloGrilla(x.cat, x.m)}</span>
         </div></td>`;
       }
@@ -1581,7 +1587,7 @@ function tarjetaLive(u, mine){
   const cerrado = ev.estado === 'ok';
   const linea = (L, cual) => {
     const win = cerrado && ev.gan === cual;
-    return `<div class="vs${L.num ? '' : ' pend'}">${L.num ? `<span class="n">${pad(L.num)}</span>` : ''}<span>${esc(L.txt)}${win ? ' ✓' : ''}</span></div>`;
+    return `<div class="vs${L.num ? '' : ' pend'}">${L.num ? `<span class="n">${pad(L.num)}</span>` : ''}<span>${esc(L.txt)}${win ? ' <b class="wg">G</b>' : ''}</span></div>`;
   };
   const esMia = mine && (mine === cat.id+':'+A.id || mine === cat.id+':'+B.id);
   return `<div class="live${esMia ? ' mine' : ''}" style="--cc:${colorCat(cat)}">
@@ -1633,7 +1639,7 @@ function renderMiPareja(){
   S.cats.filter(c => c.parejas > 1).forEach(c => {
     for(let i = 0; i < c.parejas; i++){
       const key = c.id+':'+i;
-      opts.push(`<option value="${key}"${miPareja === key ? ' selected' : ''}>${esc(c.nom)} · ${esc(nombrePareja(c,i))} (#${pad(numGlobal(c,i))})</option>`);
+      opts.push(`<option value="${key}"${miPareja === key ? ' selected' : ''}>${esc(c.nom)} · ${esc(nombrePareja(c,i))}</option>`);
     }
   });
   let html = `<div class="pick"><select id="pickPareja">${opts.join('')}</select></div>`;
@@ -1663,7 +1669,7 @@ function renderMiPareja(){
         : (mios.every(x => x.ev.estado === 'ok') ? 'Sin más partidos por ahora' : 'Horario a confirmar');
 
       html += `<div class="mine-card" style="--cc:${colorCat(cat)}">
-        <div class="mch"><b>${esc(nombrePareja(cat,idx))}</b><span>${esc(cat.nom)} · #${pad(numGlobal(cat,idx))}</span></div>
+        <div class="mch"><b>${esc(nombrePareja(cat,idx))}</b><span>${esc(cat.nom)}</span></div>
         <div class="mine-next"><div class="big${prox ? '' : ' none'}">${prox ? 'Próximo: '+esc(prox.m.fase)+' '+esc(prox.m.id) : 'Sin próximo partido'}</div>
           <div class="sm">${nextTxt}</div></div>
         <div class="mine-list">`;
