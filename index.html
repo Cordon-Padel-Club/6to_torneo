@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>/* lz-string 1.5.0 embebido: el archivo funciona sin internet */
 var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",e={};function t(r,o){if(!e[r]){e[r]={};for(var n=0;n<r.length;n++)e[r][r.charAt(n)]=n}return e[r][o]}var i={compressToBase64:function(r){if(null==r)return"";var n=i._compress(r,6,function(r){return o.charAt(r)});switch(n.length%4){default:case 0:return n;case 1:return n+"===";case 2:return n+"==";case 3:return n+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(n){return t(o,r.charAt(n))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(r){return null==r?"":""==r?null:i._decompress(r.length,16384,function(o){return r.charCodeAt(o)-32})},compressToUint8Array:function(r){for(var o=i.compress(r),n=new Uint8Array(2*o.length),e=0,t=o.length;e<t;e++){var s=o.charCodeAt(e);n[2*e]=s>>>8,n[2*e+1]=s%256}return n},decompressFromUint8Array:function(o){if(null==o)return i.decompress(o);for(var n=new Array(o.length/2),e=0,t=n.length;e<t;e++)n[e]=256*o[2*e]+o[2*e+1];var s=[];return n.forEach(function(o){s.push(r(o))}),i.decompress(s.join(""))},compressToEncodedURIComponent:function(r){return null==r?"":i._compress(r,6,function(r){return n.charAt(r)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),i._decompress(r.length,32,function(o){return t(n,r.charAt(o))}))},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(r,o,n){if(null==r)return"";var e,t,i,s={},u={},a="",p="",c="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<r.length;i+=1)if(a=r.charAt(i),Object.prototype.hasOwnProperty.call(s,a)||(s[a]=f++,u[a]=!0),p=c+a,Object.prototype.hasOwnProperty.call(s,p))c=p;else{if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++),s[p]=f++,c=String(a)}if(""!==c){if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++)}for(t=2,e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;for(;;){if(m<<=1,v==o-1){d.push(n(m));break}v++}return d.join("")},decompress:function(r){return null==r?"":""==r?null:i._decompress(r.length,32768,function(o){return r.charCodeAt(o)})},_decompress:function(o,n,e){var t,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:e(0),position:n,index:1};for(t=0;t<3;t+=1)l[t]=t;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return i}();"function"==typeof define&&define.amd?define(function(){return LZString}):"undefined"!=typeof module&&null!=module?module.exports=LZString:"undefined"!=typeof angular&&null!=angular&&angular.module("LZString",[]).factory("LZString",function(){return LZString});
 </script>
@@ -313,6 +314,17 @@ body[data-rol="cliente"] #heroSub{display:none;}
 .pub-btns .pub-main:hover{background:var(--red-osc);border-color:var(--red-osc);}
 .pub-sep{text-align:center;font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-suave);margin:14px 0 8px!important;}
 .pub-body code{font-family:var(--mono);font-size:11px;background:var(--pared-2);padding:1px 4px;color:var(--red-osc);}
+.nube-box{border:1px solid var(--red);background:#fff;padding:11px;margin:0 0 4px;}
+.nube-t{font-family:var(--display);font-size:18px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;color:var(--red-osc);margin-bottom:6px;}
+.nube-lbl{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-suave);margin:8px 0 3px;}
+.nube-inp{width:100%;font-family:var(--mono);font-size:13px;border:1px solid var(--linea);padding:9px;background:#fff;color:var(--tinta);box-sizing:border-box;}
+.nube-inp:focus{outline:none;border-color:var(--red);}
+.nube-estado{font-family:var(--mono);font-size:11px;color:var(--tinta-suave);margin:9px 0 0!important;min-height:14px;}
+#envivo{display:none;align-items:center;gap:5px;background:var(--red);color:#fff;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;padding:4px 9px;margin-left:8px;}
+#envivo .dot{width:7px;height:7px;border-radius:50%;background:#fff;animation:latido 1.6s infinite;}
+#envivo.pulse{animation:destello .9s;}
+@keyframes latido{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes destello{0%{background:var(--red-osc)}100%{background:var(--red)}}
 
 /* ===== AHORA EN CANCHA ===== */
 .live-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:9px;}
@@ -401,6 +413,25 @@ body[data-rol="cliente"] .match-top .st{display:none;}
   <div class="pub org-only" id="pubBox">
     <div class="pub-head">Compartir con los jugadores</div>
     <div class="pub-body">
+      <div class="nube-box">
+        <div class="nube-t">⚡ Tiempo real (en la nube)</div>
+        <p>Publicá el torneo una vez y compartí un <b>enlace fijo</b>. Cada resultado que cargues, los jugadores lo ven actualizarse solo — sin mandarles un enlace nuevo.</p>
+        <label class="nube-lbl">Etiqueta del torneo (va en el enlace)</label>
+        <input type="text" id="nubeSlug" class="nube-inp" placeholder="ej: cordon-set" autocomplete="off" spellcheck="false">
+        <div class="pub-btns">
+          <button data-nubepub="1" class="pub-main">⚡ Publicar y activar tiempo real</button>
+        </div>
+        <div id="nubeLinkWrap" style="display:none;margin-top:10px">
+          <label class="nube-lbl">Enlace fijo para los jugadores</label>
+          <textarea class="pub-link" id="nubeLink" readonly></textarea>
+          <div class="pub-btns">
+            <button data-nubecopiar="1">Copiar enlace</button>
+            <button data-nubeabrir="1">Probar vista jugador</button>
+          </div>
+        </div>
+        <p class="nube-estado" id="nubeEstado"></p>
+      </div>
+      <p class="pub-sep">— o compartí una foto fija, sin tiempo real —</p>
       <p><b>Opción recomendada.</b> Descargá el archivo del torneo (ya lleva todo adentro: categorías, grupos, horarios y resultados) y mandalo por WhatsApp como <b>documento adjunto</b>. El jugador lo abre y entra directo a su vista, sin poder editar.</p>
       <div class="pub-btns">
         <button data-descargar="1" class="pub-main">⬇ Descargar archivo para jugadores</button>
@@ -419,7 +450,7 @@ body[data-rol="cliente"] .match-top .st{display:none;}
 
   <!-- ===================== CLIENTE ===================== -->
   <section id="ahora" class="cli-only">
-    <div class="sec-head"><span class="n cc" style="--cc:var(--red)">•</span><h2>Ahora en cancha</h2><span class="rule"></span></div>
+    <div class="sec-head"><span class="n cc" style="--cc:var(--red)">•</span><h2>Ahora en cancha</h2><span class="rule"></span><span id="envivo"><span class="dot"></span>En vivo</span></div>
     <div id="ahoraPanel"></div>
   </section>
 
@@ -480,7 +511,7 @@ body[data-rol="cliente"] .match-top .st{display:none;}
       <p class="note"><b>Fase final.</b> Se calcula sola: clasificados = grupos × cupos + repechaje. Si el número no es potencia de 2, el validador te lo marca y te dice cuánto falta o sobra.</p>
       <p class="note"><b>Guardado.</b> Se guarda solo si el visor lo permite. Antes de cerrar, usá Exportar y quedate con el texto.</p>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v0.4 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v0.6 · Julio 2026</p>
   </div>
 </footer>
 
@@ -560,12 +591,19 @@ let SOLO_JUGADOR = false; // true en el archivo publicado: bloquea la vuelta a o
 let miPareja = null;      // "catId:idx" que el jugador eligió
 let relojTimer = null;
 
-async function guardar(){ if(ROL === 'cliente') return; try{ await window.storage.set('padel:esqueleto', JSON.stringify(S)); }catch(e){} }
+async function guardar(){
+  if(ROL === 'cliente') return;
+  try{ await window.storage.set('padel:esqueleto', JSON.stringify(S)); }catch(e){}
+  try{ localStorage.setItem('padel:esqueleto', JSON.stringify(S)); }catch(e){}
+  nubeGuardarDebounced();
+}
 function normalizar(o){ o.fijos = o.fijos || {}; o.nom = o.nom || {}; o.res = o.res || {}; o.modoGrilla = o.modoGrilla || 'auto'; o.cats = o.cats || []; o.dias = o.dias || []; o.fecha = o.fecha || ''; return o; }
 async function cargar(){
   try{
-    const r = await window.storage.get('padel:esqueleto');
-    S = (r && r.value) ? JSON.parse(r.value) : estadoEjemplo();
+    let raw = null;
+    try{ const r = await window.storage.get('padel:esqueleto'); if(r && r.value) raw = r.value; }catch(e){}
+    if(!raw){ try{ raw = localStorage.getItem('padel:esqueleto'); }catch(e){} }
+    S = raw ? JSON.parse(raw) : estadoEjemplo();
     normalizar(S);
   }catch(e){ S = estadoEjemplo(); }
 }
@@ -595,6 +633,82 @@ function leerLink(){
     const p = JSON.parse(raw);
     return expandir(p);
   }catch(e){ return null; }
+}
+
+/* ============ TIEMPO REAL (Supabase) ============ */
+const SB_URL = 'https://ejbdnntnnaebqocohumq.supabase.co';
+const SB_KEY = 'sb_publishable_1pC3FRMX1CZtQKN3xHHniw_mVTMqpqC';
+let SB = null;
+try{ if(window.supabase && window.supabase.createClient) SB = window.supabase.createClient(SB_URL, SB_KEY); }catch(e){ SB = null; }
+
+const NUBE = { slug:'', on:false, canal:null };
+let syncTimer = null;
+
+function slugify(s){
+  return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40);
+}
+function linkNube(slug){ return location.href.split('#')[0].split('?')[0] + '?t=' + encodeURIComponent(slug); }
+function leerSlug(){ const m = (location.search||'').match(/[?&]t=([^&]+)/); return m ? decodeURIComponent(m[1]) : null; }
+function setEstadoNube(txt, err){
+  const el = document.getElementById('nubeEstado');
+  if(el){ el.textContent = txt; el.style.color = err ? 'var(--red)' : 'var(--tinta-suave)'; }
+}
+function badgeEnVivo(on){ const b = document.getElementById('envivo'); if(b) b.style.display = on ? 'inline-flex' : 'none'; }
+
+/* --- organizador: subir estado a la nube (con debounce) --- */
+async function nubeGuardar(){
+  if(!SB || !NUBE.on || !NUBE.slug) return;
+  setEstadoNube('Sincronizando…');
+  try{
+    const { error } = await SB.from('torneos').upsert({
+      slug: NUBE.slug, estado: estadoPublicable(), actualizado: new Date().toISOString()
+    });
+    if(error) setEstadoNube('Error al sincronizar: ' + error.message, true);
+    else setEstadoNube('Sincronizado ✓  ·  ' + new Date().toLocaleTimeString('es-UY',{hour:'2-digit',minute:'2-digit',second:'2-digit'}));
+  }catch(e){ setEstadoNube('Sin conexión con la nube', true); }
+}
+function nubeGuardarDebounced(){ clearTimeout(syncTimer); syncTimer = setTimeout(nubeGuardar, 700); }
+
+async function nubePublicar(){
+  if(!SB){ setEstadoNube('No se pudo iniciar la nube. ¿Hay internet?', true); return; }
+  const inp = document.getElementById('nubeSlug');
+  const slug = slugify(inp ? inp.value : '') || slugify(S.torneo) || ('torneo-' + Date.now().toString(36));
+  NUBE.slug = slug; NUBE.on = true;
+  if(inp) inp.value = slug;
+  try{ localStorage.setItem('padel:slug', slug); }catch(e){}
+  await nubeGuardar();
+  const lk = document.getElementById('nubeLink'); if(lk) lk.value = linkNube(slug);
+  const wrap = document.getElementById('nubeLinkWrap'); if(wrap) wrap.style.display = 'block';
+}
+
+/* --- jugador: leer estado inicial y suscribirse a cambios en vivo --- */
+async function nubeLeerCliente(slug){
+  if(!SB) return false;
+  try{
+    const { data, error } = await SB.from('torneos').select('estado').eq('slug', slug).maybeSingle();
+    if(error || !data || !data.estado) return false;
+    S = expandir(data.estado);
+    return true;
+  }catch(e){ return false; }
+}
+function nubeSuscribir(slug){
+  if(!SB) return;
+  try{
+    NUBE.canal = SB.channel('rt-' + slug)
+      .on('postgres_changes',
+          { event:'*', schema:'public', table:'torneos', filter:'slug=eq.' + slug },
+          payload => {
+            const row = payload && payload.new;
+            if(row && row.estado){
+              S = expandir(row.estado);
+              render(); renderAhora(); renderMiPareja(); renderGrilla();
+              const b = document.getElementById('envivo');
+              if(b){ b.classList.add('pulse'); setTimeout(()=>b.classList.remove('pulse'), 900); }
+            }
+          })
+      .subscribe();
+  }catch(e){}
 }
 
 /* =====================================================================
@@ -1660,7 +1774,7 @@ document.addEventListener('input', e => {
 });
 
 document.addEventListener('click', e => {
-  const b = e.target.closest('[data-act], [data-cat], [data-d], [data-mv], [data-drop], [data-unfix], [data-cancelmv], [data-clearfix], [data-modo], [data-verpub], [data-verorg], [data-pub], [data-copiar], [data-abrir], [data-cerrarpub], [data-descargar]');
+  const b = e.target.closest('[data-act], [data-cat], [data-d], [data-mv], [data-drop], [data-unfix], [data-cancelmv], [data-clearfix], [data-modo], [data-verpub], [data-verorg], [data-pub], [data-copiar], [data-abrir], [data-cerrarpub], [data-descargar], [data-nubepub], [data-nubecopiar], [data-nubeabrir]');
   if(!b) return;
   const d = b.dataset;
   if(d.descargar){ descargarArchivo(b); return; }
@@ -1670,6 +1784,10 @@ document.addEventListener('click', e => {
   if(d.cerrarpub){ $('#pubBox').classList.remove('on'); return; }
   if(d.copiar){ const t = $('#pubLink'); t.select();
     navigator.clipboard ? navigator.clipboard.writeText(t.value).then(()=>flash(b,'¡Copiado!')) : (document.execCommand('copy'), flash(b,'¡Copiado!')); return; }
+  if(d.nubepub){ nubePublicar(); return; }
+  if(d.nubecopiar){ const t = $('#nubeLink'); t.select();
+    navigator.clipboard ? navigator.clipboard.writeText(t.value).then(()=>flash(b,'¡Copiado!')) : (document.execCommand('copy'), flash(b,'¡Copiado!')); return; }
+  if(d.nubeabrir){ window.open($('#nubeLink').value, '_blank'); return; }
   if(d.abrir){ window.open($('#pubLink').value, '_blank'); return; }
   if(d.cat){ catActiva = d.cat; render(); return; }
   if(d.d !== undefined){ diaActivo = +d.d; renderGrilla(); return; }
@@ -1772,6 +1890,16 @@ function togglePub(){
     ? `<span style="color:var(--red)">Ojo: este enlace empieza con <code>file:///</code>, así que sólo abre en tu propia computadora. Para compartir, usá el botón de descarga de arriba.</span>`
     : `<span style="color:var(--tinta-suave)">Enlace listo. Como está publicado en internet, funciona para cualquiera.</span>`;
   box.classList.add('on');
+  // reflejar estado de la nube
+  const ns = $('#nubeSlug');
+  if(ns && !ns.value) ns.value = NUBE.slug || slugify(S.torneo);
+  if(NUBE.on && NUBE.slug){
+    const lk = $('#nubeLink'); if(lk) lk.value = linkNube(NUBE.slug);
+    const wrap = $('#nubeLinkWrap'); if(wrap) wrap.style.display = 'block';
+    if(SB) setEstadoNube('Tiempo real activo · etiqueta: ' + NUBE.slug);
+  } else if(!SB){
+    setEstadoNube('Sin conexión con la nube (revisá internet).', true);
+  }
   box.scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 
@@ -1796,19 +1924,39 @@ function leerEmbed(){
   }catch(e){ return null; }
 }
 
-/* ---- arranque: si viene con torneo embebido o #data=, entra como jugador ---- */
+/* ---- arranque ---- */
 (async () => {
-  const embebido = leerEmbed();          // sólo el archivo descargado tiene esto
+  const embebido = leerEmbed();
+  const slug = leerSlug();
+
+  // 1) JUGADOR EN VIVO — enlace ?t=slug (nube)
+  if(slug && SB){
+    const ok = await nubeLeerCliente(slug);
+    if(ok){
+      ROL = 'cliente'; SOLO_JUGADOR = true; NUBE.slug = slug; NUBE.on = true;
+      render(); renderAhora(); renderMiPareja(); renderGrilla();
+      badgeEnVivo(true);
+      nubeSuscribir(slug);
+      relojTimer = setInterval(() => { if(ROL === 'cliente'){ renderAhora(); renderMiPareja(); renderGrilla(); } }, 60000);
+      return;
+    }
+    // el torneo no existe en la nube: seguimos abajo
+  }
+
+  // 2) JUGADOR FIJO — archivo embebido o enlace #data=
   const desde = embebido || leerLink();
   if(desde){
-    S = desde; ROL = 'cliente';
-    // llegó por archivo embebido O por enlace #data=: en ambos casos es SOLO jugador
-    SOLO_JUGADOR = true;
+    S = desde; ROL = 'cliente'; SOLO_JUGADOR = true;
     render();
     relojTimer = setInterval(() => { if(ROL === 'cliente'){ renderAhora(); renderMiPareja(); renderGrilla(); } }, 60000);
-  } else {
-    await cargar(); ROL = 'org'; render();
+    return;
   }
+
+  // 3) ORGANIZADOR
+  await cargar(); ROL = 'org';
+  // reconectar autosync si ya se publicó desde este dispositivo
+  try{ const rec = localStorage.getItem('padel:slug'); if(rec && SB){ NUBE.slug = rec; NUBE.on = true; } }catch(e){}
+  render();
 })();
 </script>
 </body>
