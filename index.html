@@ -325,6 +325,15 @@ body[data-rol="cliente"] #heroSub{display:none;}
 #envivo.pulse{animation:destello .9s;}
 @keyframes latido{0%,100%{opacity:1}50%{opacity:.25}}
 @keyframes destello{0%{background:var(--red-osc)}100%{background:var(--red)}}
+.auth-bar{background:var(--pista-2);color:#e2e4e7;padding:7px 14px;display:flex;flex-wrap:wrap;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;border-bottom:2px solid var(--red);}
+.auth-bar .auth-msg{color:#c2c6cb;letter-spacing:.03em;}
+.auth-bar .auth-ok{color:#7bd88f;letter-spacing:.03em;}
+.auth-bar .auth-ok b{color:#fff;}
+.auth-bar .auth-inp{background:#0e0f11;border:1px solid #3d444b;color:#fff;font-family:var(--mono);font-size:12px;padding:5px 8px;min-width:130px;}
+.auth-bar .auth-inp:focus{outline:none;border-color:var(--red);}
+.auth-bar .auth-btn{background:var(--red);border:1px solid var(--red);color:#fff;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;cursor:pointer;}
+.auth-bar .auth-btn:hover{background:var(--red-osc);border-color:var(--red-osc);}
+.auth-bar .auth-err{color:#ff7a80;flex-basis:100%;}
 
 /* ===== AHORA EN CANCHA ===== */
 .live-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:9px;}
@@ -382,6 +391,8 @@ body[data-rol="cliente"] .match-top .st{display:none;}
     <div class="rolbar-actions" id="rolActions"></div>
   </div>
 </div>
+
+<div id="authBar" class="auth-bar org-only"></div>
 
 <header class="hero">
   <div class="wrap">
@@ -511,7 +522,7 @@ body[data-rol="cliente"] .match-top .st{display:none;}
       <p class="note"><b>Fase final.</b> Se calcula sola: clasificados = grupos × cupos + repechaje. Si el número no es potencia de 2, el validador te lo marca y te dice cuánto falta o sobra.</p>
       <p class="note"><b>Guardado.</b> Se guarda solo si el visor lo permite. Antes de cerrar, usá Exportar y quedate con el texto.</p>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v0.6 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v0.7 · Julio 2026</p>
   </div>
 </footer>
 
@@ -659,6 +670,7 @@ function badgeEnVivo(on){ const b = document.getElementById('envivo'); if(b) b.s
 /* --- organizador: subir estado a la nube (con debounce) --- */
 async function nubeGuardar(){
   if(!SB || !NUBE.on || !NUBE.slug) return;
+  if(!AUTH.user){ setEstadoNube('Iniciá sesión como organizador para guardar en la nube.', true); return; }
   setEstadoNube('Sincronizando…');
   try{
     const { error } = await SB.from('torneos').upsert({
@@ -672,6 +684,7 @@ function nubeGuardarDebounced(){ clearTimeout(syncTimer); syncTimer = setTimeout
 
 async function nubePublicar(){
   if(!SB){ setEstadoNube('No se pudo iniciar la nube. ¿Hay internet?', true); return; }
+  if(!AUTH.user){ setEstadoNube('Iniciá sesión como organizador (barra de arriba) para publicar.', true); return; }
   const inp = document.getElementById('nubeSlug');
   const slug = slugify(inp ? inp.value : '') || slugify(S.torneo) || ('torneo-' + Date.now().toString(36));
   NUBE.slug = slug; NUBE.on = true;
@@ -710,6 +723,53 @@ function nubeSuscribir(slug){
       .subscribe();
   }catch(e){}
 }
+
+/* ============ AUTENTICACIÓN DE ORGANIZADOR ============ */
+const AUTH = { user: null };
+
+async function authInit(){
+  if(!SB){ refrescarAuth(); return; }
+  try{ const { data } = await SB.auth.getSession(); AUTH.user = (data && data.session) ? data.session.user : null; }catch(e){ AUTH.user = null; }
+  try{ SB.auth.onAuthStateChange((_ev, session) => { AUTH.user = session ? session.user : null; refrescarAuth(); }); }catch(e){}
+  refrescarAuth();
+}
+
+function refrescarAuth(){
+  document.body.dataset.auth = AUTH.user ? 'in' : 'out';
+  const bar = document.getElementById('authBar');
+  if(!bar) return;
+  if(!SB){
+    bar.innerHTML = `<span class="auth-err" style="flex-basis:auto">Sin conexión con la nube — revisá internet para poder guardar.</span>`;
+    return;
+  }
+  if(AUTH.user){
+    bar.innerHTML = `<span class="auth-ok">✓ Organizador: <b>${AUTH.user.email || ''}</b></span>`
+      + `<button data-logout="1" class="auth-btn">Salir</button>`;
+  } else {
+    bar.innerHTML = `<span class="auth-msg">Ingresá como organizador para editar y publicar:</span>`
+      + `<input id="authEmail" class="auth-inp" type="email" placeholder="email" autocomplete="username">`
+      + `<input id="authPass" class="auth-inp" type="password" placeholder="contraseña" autocomplete="current-password">`
+      + `<button data-login="1" class="auth-btn">Ingresar</button>`
+      + `<span class="auth-err" id="authErr"></span>`;
+  }
+}
+
+async function authLogin(btn){
+  if(!SB) return;
+  const email = (document.getElementById('authEmail') || {}).value || '';
+  const pass  = (document.getElementById('authPass')  || {}).value || '';
+  const err = document.getElementById('authErr');
+  if(!email || !pass){ if(err) err.textContent = 'Completá email y contraseña.'; return; }
+  const prev = btn.textContent; btn.disabled = true; btn.textContent = 'Ingresando…';
+  try{
+    const { error } = await SB.auth.signInWithPassword({ email, password: pass });
+    if(error){ if(err) err.textContent = 'No se pudo entrar: ' + error.message; btn.disabled = false; btn.textContent = prev; return; }
+    // onAuthStateChange refresca la barra; reintentamos sincronizar si había torneo publicado
+    if(NUBE.on && NUBE.slug) nubeGuardar();
+  }catch(e){ if(err) err.textContent = 'Error de conexión.'; btn.disabled = false; btn.textContent = prev; }
+}
+
+async function authLogout(){ try{ await SB.auth.signOut(); }catch(e){} }
 
 /* =====================================================================
    DERIVADOS: grupos, numeración, partidos
@@ -1774,7 +1834,7 @@ document.addEventListener('input', e => {
 });
 
 document.addEventListener('click', e => {
-  const b = e.target.closest('[data-act], [data-cat], [data-d], [data-mv], [data-drop], [data-unfix], [data-cancelmv], [data-clearfix], [data-modo], [data-verpub], [data-verorg], [data-pub], [data-copiar], [data-abrir], [data-cerrarpub], [data-descargar], [data-nubepub], [data-nubecopiar], [data-nubeabrir]');
+  const b = e.target.closest('[data-act], [data-cat], [data-d], [data-mv], [data-drop], [data-unfix], [data-cancelmv], [data-clearfix], [data-modo], [data-verpub], [data-verorg], [data-pub], [data-copiar], [data-abrir], [data-cerrarpub], [data-descargar], [data-nubepub], [data-nubecopiar], [data-nubeabrir], [data-login], [data-logout]');
   if(!b) return;
   const d = b.dataset;
   if(d.descargar){ descargarArchivo(b); return; }
@@ -1788,6 +1848,8 @@ document.addEventListener('click', e => {
   if(d.nubecopiar){ const t = $('#nubeLink'); t.select();
     navigator.clipboard ? navigator.clipboard.writeText(t.value).then(()=>flash(b,'¡Copiado!')) : (document.execCommand('copy'), flash(b,'¡Copiado!')); return; }
   if(d.nubeabrir){ window.open($('#nubeLink').value, '_blank'); return; }
+  if(d.login){ authLogin(b); return; }
+  if(d.logout){ authLogout(); return; }
   if(d.abrir){ window.open($('#pubLink').value, '_blank'); return; }
   if(d.cat){ catActiva = d.cat; render(); return; }
   if(d.d !== undefined){ diaActivo = +d.d; renderGrilla(); return; }
@@ -1912,6 +1974,14 @@ document.addEventListener('change', e => {
   }
 });
 
+/* Enter en el formulario de login = Ingresar */
+document.addEventListener('keydown', e => {
+  if(e.key === 'Enter' && e.target && (e.target.id === 'authEmail' || e.target.id === 'authPass')){
+    const btn = document.querySelector('[data-login]');
+    if(btn) authLogin(btn);
+  }
+});
+
 /* ---- leer estado embebido en un archivo descargado ---- */
 function leerEmbed(){
   const el = document.getElementById('torneoEmbed');
@@ -1957,6 +2027,7 @@ function leerEmbed(){
   // reconectar autosync si ya se publicó desde este dispositivo
   try{ const rec = localStorage.getItem('padel:slug'); if(rec && SB){ NUBE.slug = rec; NUBE.on = true; } }catch(e){}
   render();
+  authInit();
 })();
 </script>
 </body>
