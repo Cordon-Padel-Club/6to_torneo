@@ -410,6 +410,7 @@ body[data-rol="cliente"] .match-top .st{display:none;}
       <textarea class="pub-link" id="pubLink" readonly></textarea>
       <div class="pub-btns">
         <button data-copiar="1">Copiar enlace</button>
+        <button data-corto="1">Copiar enlace corto</button>
         <button data-abrir="1">Probar vista jugador</button>
         <button data-cerrarpub="1">Cerrar</button>
       </div>
@@ -1660,7 +1661,7 @@ document.addEventListener('input', e => {
 });
 
 document.addEventListener('click', e => {
-  const b = e.target.closest('[data-act], [data-cat], [data-d], [data-mv], [data-drop], [data-unfix], [data-cancelmv], [data-clearfix], [data-modo], [data-verpub], [data-verorg], [data-pub], [data-copiar], [data-abrir], [data-cerrarpub], [data-descargar]');
+  const b = e.target.closest('[data-act], [data-cat], [data-d], [data-mv], [data-drop], [data-unfix], [data-cancelmv], [data-clearfix], [data-modo], [data-verpub], [data-verorg], [data-pub], [data-copiar], [data-corto], [data-abrir], [data-cerrarpub], [data-descargar]');
   if(!b) return;
   const d = b.dataset;
   if(d.descargar){ descargarArchivo(b); return; }
@@ -1670,6 +1671,7 @@ document.addEventListener('click', e => {
   if(d.cerrarpub){ $('#pubBox').classList.remove('on'); return; }
   if(d.copiar){ const t = $('#pubLink'); t.select();
     navigator.clipboard ? navigator.clipboard.writeText(t.value).then(()=>flash(b,'¡Copiado!')) : (document.execCommand('copy'), flash(b,'¡Copiado!')); return; }
+  if(d.corto){ acortarYcopiar(b); return; }
   if(d.abrir){ window.open($('#pubLink').value, '_blank'); return; }
   if(d.cat){ catActiva = d.cat; render(); return; }
   if(d.d !== undefined){ diaActivo = +d.d; renderGrilla(); return; }
@@ -1773,6 +1775,50 @@ function togglePub(){
     : `<span style="color:var(--tinta-suave)">Enlace listo. Como está publicado en internet, funciona para cualquiera.</span>`;
   box.classList.add('on');
   box.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+/* ---- enlace corto (best-effort: usa un servicio externo; requiere internet) ---- */
+async function acortarURL(url){
+  // 1) cleanuri — POST, tolera URLs largas y tiene CORS habilitado
+  try{
+    const r = await fetch('https://cleanuri.com/api/v1/shorten', {
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:'url=' + encodeURIComponent(url)
+    });
+    if(r.ok){ const j = await r.json(); if(j && j.result_url) return j.result_url; }
+  }catch(e){}
+  // 2) is.gd — GET
+  try{
+    const r = await fetch('https://is.gd/create.php?format=simple&url=' + encodeURIComponent(url));
+    if(r.ok){ const t = (await r.text()).trim(); if(/^https?:\/\//.test(t)) return t; }
+  }catch(e){}
+  // 3) tinyurl — GET (puede fallar por CORS en algunos navegadores)
+  try{
+    const r = await fetch('https://tinyurl.com/api-create.php?url=' + encodeURIComponent(url));
+    if(r.ok){ const t = (await r.text()).trim(); if(/^https?:\/\//.test(t)) return t; }
+  }catch(e){}
+  return null;
+}
+
+async function acortarYcopiar(btn){
+  const largo = $('#pubLink').value;
+  if(!largo){ flash(btn, 'Publicá primero'); return; }
+  if(largo.startsWith('file:')){ flash(btn, 'Subí el archivo antes'); return; }
+  const prev = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Acortando…';
+  const corto = await acortarURL(largo);
+  btn.disabled = false; btn.textContent = prev;
+  if(!corto){
+    $('#pubHint').innerHTML = `<span style="color:var(--red)">No se pudo acortar automáticamente (sin internet o el servicio no respondió). El enlace largo de arriba funciona igual; también podés acortarlo a mano en tinyurl.com.</span>`;
+    flash(btn, 'No se pudo'); return;
+  }
+  $('#pubLink').value = corto;
+  $('#pubHint').innerHTML = `<span style="color:var(--tinta-suave)">Enlace corto listo. Probalo una vez antes de repartirlo, y recordá que si el acortador se cae, el enlace deja de abrir.</span>`;
+  let copiado = false;
+  try{ if(navigator.clipboard){ await navigator.clipboard.writeText(corto); copiado = true; } }catch(e){}
+  if(!copiado){ const t = $('#pubLink'); t.focus(); t.select(); try{ document.execCommand('copy'); copiado = true; }catch(e){} }
+  flash(btn, copiado ? '¡Corto copiado!' : 'Copialo de arriba');
 }
 
 /* selector de "mi pareja" (change, no input) */
