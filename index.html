@@ -391,7 +391,7 @@ body[data-rol="cliente"] .side .num{display:none;}
 body[data-rol="cliente"] .pos td .p{display:none;}
 body[data-rol="cliente"] .vs .n{display:none;}
 /* marca de ganador / jugado */
-.wg{color:var(--red);font-weight:700;}
+.wg{color:var(--tinta-suave);font-weight:700;}
 </style>
 </head>
 <body data-rol="org">
@@ -533,7 +533,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
       <p class="note"><b>Fase final.</b> Se calcula sola: clasificados = grupos × cupos + repechaje. Si el número no es potencia de 2, el validador te lo marca y te dice cuánto falta o sobra.</p>
       <p class="note"><b>Guardado.</b> Se guarda solo si el visor lo permite. Antes de cerrar, usá Exportar y quedate con el texto.</p>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v0.9 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v1.0 · Julio 2026</p>
   </div>
 </footer>
 
@@ -1434,7 +1434,7 @@ function renderGrilla(){
         const mia = miPareja && [x.m.a,x.m.b].some(l => miPareja === x.cat.id+':'+resolver(x.cat,l));
         tds += `<td><div class="slot${mia ? ' moving' : ''}" style="--cc:${colorCat(x.cat)}">
           <span class="c${x.m.gr ? '' : ' f'}">${esc(x.cat.nom)}</span>
-          <span class="m"><b>${esc(x.m.id)}</b> · ${esc(x.m.fase)}${ev.estado === 'ok' ? ' <b class="wg">G</b>' : ''}</span>
+          <span class="m"><b>${esc(x.m.id)}</b> · ${esc(x.m.fase)}${ev.estado === 'ok' ? ' ✓' : ''}</span>
           <span class="duo">${rotuloGrilla(x.cat, x.m)}</span>
         </div></td>`;
       }
