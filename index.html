@@ -544,7 +544,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
   <div class="wrap">
     <div class="org-only">
       <p class="note"><b>Formato de grupo.</b> “Llave” es el formato de planilla de club: en grupos de 3 juegan 1–2, después el 3 contra el ganador y contra el perdedor; en grupos de 4 es una llave de consolación y el orden final sale de los cruces, no de los puntos. “Todos contra todos” genera todos los partidos posibles y ahí sí manda la tabla.</p>
-      <p class="note"><b>Fase final.</b> Se calcula sola: clasificados = grupos × cupos + repechaje. Si el número no es potencia de 2, el validador te lo marca y te dice cuánto falta o sobra.</p>
+      <p class="note"><b>Fase final.</b> Se calcula sola: clasificados = grupos × cupos + repechaje. Si el total no es potencia de 2, el motor arma la llave con <b>BYE</b>: los mejores sembrados descansan la primera ronda y el resto juega una ronda previa.</p>
       <p class="note"><b>Guardado.</b> Se guarda solo si el visor lo permite. Antes de cerrar, usá Exportar y quedate con el texto.</p>
     </div>
     <div class="foot-social">
@@ -581,6 +581,16 @@ const esPot2 = n => n >= 2 && (n & (n-1)) === 0;
 const colorCat = cat => 'var(--cat'+(S.cats.findIndex(c => c.id === cat.id) % 8)+')';
 const NOMBRE_FASE = n => ({2:'Final', 4:'Semifinal', 8:'Cuartos de final', 16:'Octavos de final', 32:'16avos'}[n] || (n+' equipos'));
 const CLAVE_FASE = n => ({2:'FIN', 4:'SF', 8:'CF', 16:'OF', 32:'DF'}[n] || 'RD');
+/* orden de siembra estándar para una llave de tamaño S (potencia de 2) */
+function seedOrder(S){
+  let order = [1, 2];
+  while(order.length < S){
+    const sum = order.length * 2 + 1, next = [];
+    order.forEach(x => { next.push(x); next.push(sum - x); });
+    order = next;
+  }
+  return order;
+}
 
 /* =====================================================================
    ESTADO
@@ -912,44 +922,78 @@ function partidosGrupo(cat, gr){
 function analisisLlave(cat){
   const grs = gruposDe(cat);
   const G = grs.length;
-  const pasan = Math.max(1, Math.min(cat.pasan || 1, Math.min(...grs.map(x => x.p.length)) || 1));
-  const repes = Math.max(0, Math.min(cat.repes || 0, G));
+  const minG = grs.length ? Math.min(...grs.map(x => x.p.length)) : 0;
+  const maxG = grs.length ? Math.max(...grs.map(x => x.p.length)) : 0;
+  const pasan = Math.max(1, Math.min(cat.pasan || 1, minG || 1));
+  // repechaje disponible: mejores (pasan+1)º, luego (pasan+2)º, etc. (uno por grupo que tenga ese puesto)
+  let repDisp = 0;
+  for(let n = pasan + 1; n <= maxG; n++) repDisp += grs.filter(gr => gr.p.length >= n).length;
+  const repes = Math.max(0, Math.min(cat.repes || 0, repDisp));
   const Q = G * pasan + repes;
-  return {grs, G, pasan, repes, Q, valida: G > 0 && esPot2(Q) && Q <= (cat.parejas||0)};
+  const S = Q >= 2 ? Math.pow(2, Math.ceil(Math.log2(Q))) : 0;
+  const byes = S - Q;
+  return {grs, G, pasan, repes, repDisp, maxG, Q, S, byes, valida: G > 0 && Q >= 2 && Q <= (cat.parejas||0)};
+}
+
+/* sembrados de repechaje: los mejores (pasan+1)º y, si faltan, los mejores (pasan+2)º, etc. */
+function seedsRepechaje(a){
+  const seeds = [];
+  let need = a.repes, level = a.pasan + 1;
+  while(need > 0 && level <= a.maxG){
+    const avail = a.grs.filter(gr => gr.p.length >= level).length;
+    const take = Math.min(need, avail);
+    for(let k = 0; k < take; k++) seeds.push({t:'rep', n:level, k});
+    need -= take; level++;
+  }
+  return seeds;
 }
 
 function partidosLlave(cat){
   const a = analisisLlave(cat);
-  if(!a.G || !esPot2(a.Q) || a.Q < 2) return [];
+  if(!a.valida || a.Q < 2) return [];
+  // sembrados por posición (todos los 1º, luego 2º, ...) + repechaje al final (peor sembrados)
   const seeds = [];
   for(let n = 1; n <= a.pasan; n++) a.grs.forEach(gr => seeds.push({t:'pos', g:gr.g, n}));
-  for(let k = 0; k < a.repes; k++) seeds.push({t:'rep', k, n:a.pasan+1});
-  const grupoDe = s => s.t === 'pos' ? s.g : '*';
+  seedsRepechaje(a).forEach(s => seeds.push(s));
+  const grupoDe = s => s && s.t === 'pos' ? s.g : '*';
 
-  // cruce estándar: 1º contra el último sembrado, evitando repetir grupo en la primera ronda
-  const B = a.Q, pares = [];
-  const bot = seeds.slice(B/2).reverse();
-  const top = seeds.slice(0, B/2);
-  for(let i = 0; i < B/2; i++){
-    if(grupoDe(top[i]) !== '*' && grupoDe(top[i]) === grupoDe(bot[i])){
-      const j = bot.findIndex((s,x) => x !== i && grupoDe(s) !== grupoDe(top[i]) && grupoDe(top[x]) !== grupoDe(bot[i]));
-      if(j >= 0){ const tmp = bot[i]; bot[i] = bot[j]; bot[j] = tmp; }
+  const S = a.S;
+  const order = seedOrder(S);
+  // slot k -> sembrado (order[k]) si existe, si no null = BYE
+  const slot = order.map(sn => sn <= a.Q ? seeds[sn - 1] : null);
+
+  // anti-cruce de mismo grupo en la primera ronda jugada: intercambia lados B entre partidos reales
+  const reales = [];
+  for(let i = 0; i < S / 2; i++) if(slot[2*i] && slot[2*i+1]) reales.push([2*i, 2*i+1]);
+  for(let x = 0; x < reales.length; x++){
+    const [ai, bi] = reales[x];
+    if(grupoDe(slot[ai]) !== '*' && grupoDe(slot[ai]) === grupoDe(slot[bi])){
+      for(let y = 0; y < reales.length; y++){
+        if(y === x) continue;
+        const [ay, by] = reales[y];
+        if(grupoDe(slot[ai]) !== grupoDe(slot[by]) && grupoDe(slot[ay]) !== grupoDe(slot[bi])){
+          const t = slot[bi]; slot[bi] = slot[by]; slot[by] = t; break;
+        }
+      }
     }
-    pares.push([top[i], bot[i]]);
   }
 
-  const out = []; let size = B, prev = [];
-  let ronda = 0;
-  while(size >= 2){
-    const pref = CLAVE_FASE(size), fase = NOMBRE_FASE(size), n = size/2, actual = [];
+  // construir rondas: los BYE hacen avanzar directo al sembrado; el resto son partidos
+  const out = [];
+  let feeders = slot.slice(), ronda = 0;
+  for(let size = S; size >= 2; size /= 2){
+    const pref = CLAVE_FASE(size), fase = NOMBRE_FASE(size), n = size / 2, next = [];
+    let mnum = 0;
     for(let i = 0; i < n; i++){
-      const id = size === 2 ? 'FIN' : pref+(i+1);
-      const A = ronda === 0 ? pares[i][0] : {t:'g', v:prev[i*2]};
-      const Bl = ronda === 0 ? pares[i][1] : {t:'g', v:prev[i*2+1]};
+      const A = feeders[2*i], Bl = feeders[2*i+1];
+      if(A && Bl == null){ next.push(A); continue; }   // A pasa con BYE
+      if(Bl && A == null){ next.push(Bl); continue; }   // B pasa con BYE
+      mnum++;
+      const id = size === 2 ? 'FIN' : pref + mnum;
       out.push({key:cat.id+'-'+id, id, gr:null, fase, a:A, b:Bl, ronda:80+ronda});
-      actual.push(id);
+      next.push({t:'g', v:id});
     }
-    prev = actual; size /= 2; ronda++;
+    feeders = next; ronda++;
   }
   return out;
 }
@@ -1108,12 +1152,6 @@ function validar(){
       p:'Los grupos '+chicos.map(g => g.g).join(', ')+' quedan con 2 parejas: un solo partido define todo. Probá con menos grupos.'});
     if(c.formato === 'llave' && grs.some(g => g.p.length > 4)) out.push({sev:'rev', t:c.nom+': el formato llave no llega',
       p:'Hay grupos de más de 4 parejas. En esos el motor pasa a todos contra todos, así que la categoría queda con dos formatos mezclados.'});
-    if(!esPot2(a.Q)){
-      const arriba = Math.pow(2, Math.ceil(Math.log2(Math.max(2,a.Q))));
-      const abajo = Math.pow(2, Math.floor(Math.log2(Math.max(2,a.Q))));
-      out.push({sev:'crit', t:c.nom+': la fase final no cierra',
-        p:'Clasifican '+a.Q+' ('+a.G+' grupos × '+a.pasan+(a.repes ? ' + '+a.repes+' de repechaje' : '')+') y una llave necesita 2, 4, 8 o 16. Sumá '+(arriba-a.Q)+' de repechaje para llegar a '+arriba+', o bajá a '+abajo+'.'});
-    }
     if(a.Q > c.parejas) out.push({sev:'crit', t:c.nom+': clasifican más de las que hay',
       p:'Pasan '+a.Q+' parejas y sólo juegan '+c.parejas+'.'});
   });
@@ -1178,12 +1216,13 @@ function renderCfg(){
     const maxPasan = a.grs.length ? Math.min(...a.grs.map(g => g.p.length)) : 1;
     const optP = Array.from({length:Math.max(1,maxPasan)}, (_,k) => k+1)
       .map(v => `<option value="${v}"${v === a.pasan ? ' selected' : ''}>${v} por grupo</option>`).join('');
-    const optR = Array.from({length:(a.G||0)+1}, (_,k) => k).map(v => {
+    const optR = Array.from({length:(a.repDisp||0)+1}, (_,k) => k).map(v => {
       const q = a.G*a.pasan + v;
-      return `<option value="${v}"${v === a.repes ? ' selected' : ''}>${v === 0 ? 'sin repechaje' : '+'+v+' mejores '+(a.pasan+1)+'º'} → ${q}${esPot2(q) ? ' ✓' : ' ✗'}</option>`;
+      return `<option value="${v}"${v === a.repes ? ' selected' : ''}>${v === 0 ? 'sin repechaje' : '+'+v+' de repechaje'} → ${q} clasifican</option>`;
     }).join('');
     const nPart = partidosDe(c).length;
-    const fase = esPot2(a.Q) ? NOMBRE_FASE(a.Q) : 'no cierra';
+    const fase = a.valida ? NOMBRE_FASE(a.S) : '—';
+    const infoBye = (a.valida && a.byes > 0) ? ' · <b>'+a.byes+'</b> con BYE' : '';
     return `<div class="card"><div class="card-head"><h3>${esc(c.nom || 'Sin nombre')}</h3>
       <span class="tagm">${nPart} partidos</span></div>
       <div class="card-body">
@@ -1195,10 +1234,10 @@ function renderCfg(){
           <option value="rr"${c.formato === 'rr' ? ' selected' : ''}>Todos contra todos</option></select></div>
         <div class="f"><label>Grupos</label><select data-fid="c${i}g" data-set="cat.grupos" data-i="${i}">${optG}</select></div>
         <div class="f"><label>Clasifican</label><select data-fid="c${i}q" data-set="cat.pasan" data-i="${i}">${optP}</select></div>
-        <div class="f${esPot2(a.Q) ? '' : ' bad'}"><label>Repechaje</label><select data-fid="c${i}r" data-set="cat.repes" data-i="${i}">${optR}</select></div>
+        <div class="f"><label>Repechaje</label><select data-fid="c${i}r" data-set="cat.repes" data-i="${i}">${optR}</select></div>
       </div>
       <div class="row-actions">
-        <span class="readout">${c.parejas||0} parejas · grupos <b>${a.grs.map(g => g.g+'('+g.p.length+')').join(' ')||'—'}</b> · clasifican <b>${a.Q}</b> · arranca en <b class="${esPot2(a.Q) ? '' : 'r'}">${esc(fase)}</b></span>
+        <span class="readout">${c.parejas||0} parejas · grupos <b>${a.grs.map(g => g.g+'('+g.p.length+')').join(' ')||'—'}</b> · clasifican <b>${a.Q}</b>${a.valida ? ' · llave de <b>'+a.S+'</b> ('+esc(NOMBRE_FASE(a.S))+')'+infoBye : ''}</span>
         <span><button class="mini" data-act="upCat" data-i="${i}">↑</button>
         <button class="mini del" data-act="delCat" data-i="${i}">Quitar</button></span>
       </div>
@@ -1308,7 +1347,7 @@ function renderTablaPos(cat, gr, a){
   }).join('');
   const notas = [];
   if(ROL === 'org' && tb.modo === 'llave') notas.push(`<p class="tie soft">Grupo de 4 en formato llave: el orden sale de ${gr.g}3 y ${gr.g}4, no de los puntos.</p>`);
-  if(ROL === 'org' && a.repes) notas.push(`<p class="tie soft">Además de los ${a.pasan} primeros, entran los ${a.repes} mejores ${a.pasan+1}º del torneo.</p>`);
+  if(ROL === 'org' && a.repes) notas.push(`<p class="tie soft">Además de los ${a.pasan} primeros, entran por repechaje los ${a.repes} mejores ${a.pasan+1}º del torneo${a.repes > a.G ? ' (y, completado ese cupo, los mejores '+(a.pasan+2)+'º)' : ''}.</p>`);
   if(tb.empates.length) notas.push(`<p class="tie">Empate que no rompe ningún criterio → sorteo: ${tb.empates.map(e => '#'+pad(numGlobal(cat,e[0]))+' y #'+pad(numGlobal(cat,e[1]))).join(', ')}</p>`);
   // vista jugador: quiénes clasifican (sólo cuando el grupo terminó)
   let clasif = '';
@@ -1331,11 +1370,11 @@ function renderCat(){
   $('#catTit').textContent = cat.nom;
   if(ROL === 'cliente'){
     $('#catLede').textContent = cat.parejas
-      ? (esPot2(a.Q) ? `Clasifican ${a.Q} → ${NOMBRE_FASE(a.Q)}` : `Clasifican ${a.Q}`)
+      ? (a.valida ? `Clasifican ${a.Q} → ${NOMBRE_FASE(a.S)}${a.byes > 0 ? ' (con BYE)' : ''}` : `Clasifican ${a.Q}`)
       : '';
   } else {
     $('#catLede').textContent = cat.parejas
-      ? `${cat.parejas} parejas · ${a.G} ${a.G === 1 ? 'grupo' : 'grupos'} (${a.grs.map(g => g.p.length).join('·')}) · formato ${cat.formato === 'llave' ? 'llave de club' : 'todos contra todos'} · clasifican ${a.Q}${esPot2(a.Q) ? ' → '+NOMBRE_FASE(a.Q) : ' (la llave no cierra)'}`
+      ? `${cat.parejas} parejas · ${a.G} ${a.G === 1 ? 'grupo' : 'grupos'} (${a.grs.map(g => g.p.length).join('·')}) · formato ${cat.formato === 'llave' ? 'llave de club' : 'todos contra todos'} · clasifican ${a.Q}${a.valida ? ' → '+NOMBRE_FASE(a.S)+(a.byes > 0 ? ' con BYE' : '') : ''}`
       : 'Todavía no tiene parejas cargadas.';
   }
 
@@ -1352,7 +1391,7 @@ function renderCat(){
   }
   const llave = partidosLlave(cat);
   if(llave.length){
-    html += `<div class="card"><div class="card-head"><h3>Fase final</h3><span class="tagm">desde ${esc(NOMBRE_FASE(a.Q))}</span></div><div class="card-body">`;
+    html += `<div class="card"><div class="card-head"><h3>Fase final</h3><span class="tagm">desde ${esc(NOMBRE_FASE(a.S))}${a.byes > 0 ? ' · '+a.byes+' BYE' : ''}</span></div><div class="card-body">`;
     let f = '';
     llave.forEach(m => { if(m.fase !== f){ f = m.fase; html += `<p class="fase-lbl">${esc(f)}</p>`; } html += renderPartido(cat,m); });
     const fin = IX[cat.id]['FIN'];
@@ -1363,7 +1402,7 @@ function renderCat(){
     html += `</div></div>`;
   } else {
     html += `<div class="card"><div class="card-head"><h3>Fase final</h3><span class="tagm">sin armar</span></div>
-      <div class="card-body"><p style="margin:0;color:var(--tinta-suave);font-size:14px">Clasifican ${a.Q} parejas y una llave necesita 2, 4, 8 o 16. Ajustá cupos o repechaje arriba.</p></div></div>`;
+      <div class="card-body"><p style="margin:0;color:var(--tinta-suave);font-size:14px">La fase final se arma cuando clasifican al menos 2 parejas y no más de las que juegan. Ajustá cupos o repechaje arriba.</p></div></div>`;
   }
   $('#catPanel').innerHTML = html;
 }
