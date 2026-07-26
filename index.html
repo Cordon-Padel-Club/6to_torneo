@@ -269,6 +269,10 @@ table.pos td .p{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:
 .seg button{background:#fff;border:0;border-right:1px solid var(--pista);color:var(--tinta-suave);font-family:var(--display);font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;padding:5px 13px 4px;}
 .seg button:last-child{border-right:0;}
 .seg button.on{background:var(--pista);color:#fff;}
+.aplicar{background:var(--red);color:#fff;border:0;font-family:var(--display);font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:6px 15px;cursor:pointer;}
+.aplicar:hover{filter:brightness(1.08);}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(12px);background:var(--tinta);color:#fff;font-family:var(--mono);font-size:12px;letter-spacing:.02em;padding:10px 16px;opacity:0;pointer-events:none;transition:opacity .2s ease, transform .2s ease;z-index:200;box-shadow:0 6px 24px rgba(0,0,0,.25);}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
 .modo-hint{font-size:12px;color:var(--tinta-suave);flex:1;min-width:180px;}
 /* bandeja */
 .tray{border:1px solid var(--linea);background:var(--pared-2);margin:0 0 12px;}
@@ -635,7 +639,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v3.0 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v3.1 · Julio 2026</p>
   </div>
 </footer>
 
@@ -746,11 +750,11 @@ async function cargar(){
 function estadoPublicable(){
   // sólo lo que el jugador necesita ver; sin flags de edición
   return {t:S.torneo, fx:S.fecha, cn:S.canchas, dd:S.dias, rr:S.reglas, mg:S.modoGrilla,
-          ct:S.cats, rs:S.res, nm:S.nom, fj:S.fijos};
+          ct:S.cats, rs:S.res, nm:S.nom, dp:S.disp, fj:S.fijos};
 }
 function expandir(p){
   return normalizar({torneo:p.t, fecha:p.fx, canchas:p.cn, dias:p.dd, reglas:p.rr, modoGrilla:p.mg,
-          cats:p.ct, res:p.rs, nom:p.nm, fijos:p.fj});
+          cats:p.ct, res:p.rs, nom:p.nm, disp:p.dp, fijos:p.fj});
 }
 function generarLink(){
   const json = JSON.stringify(estadoPublicable());
@@ -1654,11 +1658,10 @@ function generarGrilla(){
     }));
     for(let i = resto.length - 1; i >= 0; i--) if(colocados.has(resto[i].m.key)) resto.splice(i, 1);
 
-    // 3) PLAYOFFS: solo en dia(s) de playoffs y solo en modo automatico.
-    //    En modo Formulario el domingo no se toca: los playoffs quedan en la bandeja para armarlos a mano.
+    // 3) PLAYOFFS: en dia(s) de playoffs (domingo), tanto en Automatica como en Formulario.
     //    Categorias menores primero (numero mas alto), femenina antes que libre, cada ronda despues de
     //    la anterior y con al menos UNA franja de descanso (otras categorias juegan en el medio).
-    if(!modoForms){
+    {
     const catNum = nom => { const m = String(nom).match(/(\d+)/); return m ? +m[1] : 0; };
     const esFem = nom => /fem/i.test(String(nom));
     const offs = resto.filter(x => (x.m.ronda||0) >= 80);
@@ -1742,11 +1745,12 @@ function renderGrilla(){
       ${hayDisp ? `<button class="${forms ? 'on' : ''}" data-modo="forms">Formulario</button>` : ''}
       <button class="${manual ? 'on' : ''}" data-modo="manual">Manual</button>
     </div>
+    <button class="aplicar" data-aplicar="1" title="Congela esta grilla como definitiva y la publica al jugador">Aplicar horarios</button>
     <span class="modo-hint">${manual
-      ? 'La grilla es tuya: mové con ⇄ o arrastrando, y sacá partidos con ✕. Tocá Automática o Formulario para rearmarla desde cero.'
+      ? 'La grilla es tuya: mové con ⇄ o arrastrando, y sacá partidos con ✕. Cuando esté lista, tocá Aplicar para publicarla al jugador.'
       : forms
-        ? 'Cada grupo se ubica en un bloque donde TODAS sus parejas marcaron disponibilidad. El domingo queda libre para armarlo a mano. Si tocás la grilla (⇄, arrastre o ✕), pasa a Manual con todo tal como está.'
-        : 'El motor acomoda todo solo. Si tocás la grilla (⇄, arrastre o ✕), pasa a Manual con todo tal como está.'}</span>
+        ? 'Cada grupo se ubica en un bloque donde TODAS sus parejas marcaron disponibilidad; los playoffs van al domingo. Ajustá lo que quieras y tocá Aplicar para dejarla definitiva.'
+        : 'El motor acomoda todo solo. Ajustá lo que quieras y tocá Aplicar para dejarla definitiva y publicarla al jugador.'}</span>
   </div>`;
 
   $('#dayTabs').innerHTML = S.dias.map((d,i) => `<button data-d="${i}" aria-selected="${i === diaActivo}">${esc(d.nom)}</button>`).join('');
@@ -1877,6 +1881,12 @@ function fijarPartido(mkey, di, hora, col){
   if(S.modoGrilla !== 'manual'){ congelarGrilla(); S.modoGrilla = 'manual'; }
   S.fijos = S.fijos || {};
   S.fijos[mkey] = {di:+di, hora, cancha:+col};
+}
+function toast(msg){
+  let t = document.getElementById('toast');
+  if(!t){ t = document.createElement('div'); t.id = 'toast'; document.body.appendChild(t); }
+  t.textContent = msg; t.classList.add('on');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 2400);
 }
 function ahoraMin(){ const d = new Date(); return d.getHours()*60 + d.getMinutes(); }
 function franjaLargo(di){ const dd = S.dias[di]; return dd ? Math.max(20, +dd.franja||60) : 60; }
@@ -2225,7 +2235,7 @@ document.addEventListener('input', e => {
 });
 
 document.addEventListener('click', e => {
-  const b = e.target.closest('[data-act], [data-cat], [data-d], [data-mv], [data-drop], [data-unfix], [data-cancelmv], [data-clearfix], [data-modo], [data-verpub], [data-verorg], [data-pub], [data-copiar], [data-abrir], [data-cerrarpub], [data-descargar], [data-nubepub], [data-nubecopiar], [data-nubeabrir], [data-login], [data-logout], [data-impok], [data-impcancel]');
+  const b = e.target.closest('[data-act], [data-cat], [data-d], [data-mv], [data-drop], [data-unfix], [data-cancelmv], [data-clearfix], [data-modo], [data-verpub], [data-verorg], [data-pub], [data-copiar], [data-abrir], [data-cerrarpub], [data-descargar], [data-nubepub], [data-nubecopiar], [data-nubeabrir], [data-login], [data-logout], [data-impok], [data-impcancel], [data-aplicar]');
   if(!b) return;
   const d = b.dataset;
   if(d.descargar){ descargarArchivo(b); return; }
@@ -2246,6 +2256,13 @@ document.addEventListener('click', e => {
   if(d.abrir){ window.open($('#pubLink').value, '_blank'); return; }
   if(d.cat){ catActiva = d.cat; render(); return; }
   if(d.d !== undefined){ diaActivo = +d.d; renderGrilla(); return; }
+  if(d.aplicar){
+    congelarGrilla();
+    S.modoGrilla = 'manual';
+    moviendo = null; guardar(); render();
+    toast('Horarios aplicados · el jugador ve exactamente esta grilla');
+    return;
+  }
   if(d.modo){
     if(d.modo === 'manual'){
       if(S.modoGrilla !== 'manual'){ congelarGrilla(); S.modoGrilla = 'manual'; }
