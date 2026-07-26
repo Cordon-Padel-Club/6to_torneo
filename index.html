@@ -569,6 +569,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
       <button id="btnExport">Exportar</button>
       <button id="btnImport">Importar</button>
       <button id="btnForm">Importar formulario (CSV)</button>
+      <button id="btnAgrupar">Armar grupos (formulario)</button>
     </div>
     <input type="file" id="fileForm" accept=".csv,.tsv,.txt" style="display:none">
     <div id="formImport" class="form-import"></div>
@@ -629,7 +630,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v2.4 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v2.5 · Julio 2026</p>
   </div>
 </footer>
 
@@ -2334,6 +2335,90 @@ function previewFormulario(text){
   cont.innerHTML = html; cont.classList.add('on');
 }
 
+/* ===== ETAPA 2: armar grupos por disponibilidad (prioriza grupos de 3) ===== */
+function agruparPorDisponibilidad(){
+  const norm = t => String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
+  const rep = [];
+  S.cats.forEach(cat => {
+    const n = cat.parejas || 0;
+    if(n < 3){ rep.push({cat:cat.nom, grupos:[], sueltas:[], nota:'menos de 3 parejas: sin cambios'}); return; }
+    const pares = [];
+    for(let i = 0; i < n; i++){
+      const d = S.disp[cat.id+':'+i];
+      pares.push({i, nom:(S.nom[cat.id+':'+i] || 'Pareja '+(i+1)), set:(d && d.length) ? new Set(d.map(norm)) : null});
+    }
+    const G = Math.max(1, Math.floor(n/3));
+    const sizes = tamGrupos(n, G);
+    // formar primero los grupos más grandes (más difíciles de cerrar)
+    const orden = sizes.map((s,gi) => ({s,gi})).sort((a,b) => b.s - a.s);
+    const libres = pares.slice();
+    const asignado = {};
+    for(const {s,gi} of orden){
+      const cnt = {};
+      libres.forEach(p => { if(p.set) p.set.forEach(b => cnt[b] = (cnt[b]||0)+1); });
+      const wild = libres.filter(p => !p.set).length;
+      const cands = Object.keys(cnt).filter(b => cnt[b] + wild >= s).sort((a,b) => cnt[a] - cnt[b]);
+      let elegidos = null, bloque = null;
+      for(const b of cands){
+        const esp = libres.filter(p => p.set && p.set.has(b)).sort((x,y) => x.set.size - y.set.size);
+        const pool = esp.concat(libres.filter(p => !p.set));
+        if(pool.length >= s){ elegidos = pool.slice(0, s); bloque = b; break; }
+      }
+      if(!elegidos && wild >= s){ elegidos = libres.filter(p => !p.set).slice(0, s); }
+      if(elegidos){
+        elegidos.forEach(p => libres.splice(libres.indexOf(p), 1));
+        asignado[gi] = {p:elegidos, bloque};
+      }
+    }
+    // grupos que no cerraron: se llenan con las parejas restantes y quedan marcados
+    const sueltas = [];
+    sizes.forEach((s,gi) => {
+      if(asignado[gi]) return;
+      const p = libres.splice(0, s);
+      asignado[gi] = {p, bloque:null, forzado:true};
+      p.forEach(x => sueltas.push(x.nom));
+    });
+    sizes.forEach((s,gi) => {
+      while(asignado[gi].p.length < s && libres.length){
+        const x = libres.shift(); asignado[gi].p.push(x); asignado[gi].forzado = true; sueltas.push(x.nom);
+      }
+    });
+    // reordenar parejas: remapear nombres y disponibilidad al nuevo orden
+    const ordenFinal = [];
+    sizes.forEach((s,gi) => asignado[gi].p.forEach(p => ordenFinal.push(p.i)));
+    const nn = {}, nd = {};
+    ordenFinal.forEach((oldI, newI) => {
+      const ko = cat.id+':'+oldI, kn = cat.id+':'+newI;
+      if(S.nom[ko] != null) nn[kn] = S.nom[ko];
+      if(S.disp[ko] != null) nd[kn] = S.disp[ko];
+    });
+    Object.keys(S.nom).forEach(k => { if(k.startsWith(cat.id+':')) delete S.nom[k]; });
+    Object.keys(S.disp).forEach(k => { if(k.startsWith(cat.id+':')) delete S.disp[k]; });
+    Object.assign(S.nom, nn); Object.assign(S.disp, nd);
+    // resultados y fijos de esta categoría quedan obsoletos con el nuevo orden
+    Object.keys(S.res).forEach(k => { if(k.startsWith(cat.id+'-')) delete S.res[k]; });
+    Object.keys(S.fijos).forEach(k => { if(k.startsWith(cat.id+'-')) delete S.fijos[k]; });
+    cat.grupos = G;
+    rep.push({cat:cat.nom, grupos:sizes.map((s,gi) => ({letra:LETRAS[gi], n:s, bloque:asignado[gi].bloque, forzado:!!asignado[gi].forzado})), sueltas});
+  });
+  return rep;
+}
+
+function mostrarInformeAgrupado(rep){
+  const cont = $('#formImport');
+  let html = `<div class="fi-head">Grupos armados por disponibilidad</div>`;
+  rep.forEach(r => {
+    html += `<div class="fi-cat"><b>${esc(r.cat)}</b>`;
+    if(r.nota){ html += ` — ${esc(r.nota)}</div>`; return; }
+    html += `<div class="fi-mue">${r.grupos.map(g => g.letra+'('+g.n+')'+(g.bloque ? ' · '+esc(g.bloque) : (g.forzado ? ' · ⚠ sin bloque común' : ' · libre')).toString()).join('  ·  ')}</div>`;
+    if(r.sueltas.length) html += `<div class="fi-mue" style="color:var(--red)">⚠ Para contactar (no comparten bloque con nadie): ${r.sueltas.map(esc).join(' · ')}</div>`;
+    html += `</div>`;
+  });
+  html += `<p class="fi-warn">Las parejas se reordenaron para que cada grupo comparta un bloque horario. Los grupos marcados con ⚠ no cierran solos: en la grilla en modo Formulario van a quedar en la bandeja, y sus parejas están listadas arriba para que las contactes. Los resultados de las categorías reagrupadas se reiniciaron.</p>
+    <div class="pub-btns"><button data-impcancel="1">Cerrar</button></div>`;
+  cont.innerHTML = html; cont.classList.add('on');
+}
+
 function confirmarFormulario(){
   if(!importPend) return;
   const nom = {}, disp = {}, cats = [];
@@ -2352,6 +2437,13 @@ function confirmarFormulario(){
 }
 
 $('#btnForm').onclick = () => $('#fileForm').click();
+$('#btnAgrupar').onclick = () => {
+  if(!S.disp || !Object.keys(S.disp).length){ alert('Primero importá el formulario (CSV): la disponibilidad de las parejas sale de ahí.'); return; }
+  if(!confirm('Se reordenan las parejas de cada categoría para que cada grupo comparta un bloque horario (priorizando grupos de 3). Los resultados ya cargados de esas categorías se reinician. ¿Seguimos?')) return;
+  const rep = agruparPorDisponibilidad();
+  guardar(); render();
+  mostrarInformeAgrupado(rep);
+};
 $('#fileForm').onchange = (e) => {
   const f = e.target.files && e.target.files[0]; if(!f) return;
   const rd = new FileReader();
