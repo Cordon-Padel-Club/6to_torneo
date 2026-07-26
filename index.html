@@ -629,7 +629,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v2.2 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v2.3 · Julio 2026</p>
   </div>
 </footer>
 
@@ -1540,6 +1540,12 @@ function generarGrilla(){
   const hecho = {};
   const slotIdx = (di, hora) => slots.findIndex(s => s.di === di && s.hora === hora);
 
+  // dias de playoffs: los que se llamen "domingo"; si no hay y hay varios dias, el ultimo
+  const playoffDias = new Set();
+  S.dias.forEach((d,i) => { if(/doming/i.test(d.nom)) playoffDias.add(i); });
+  const sinDiaPlayoff = !playoffDias.size;
+  if(sinDiaPlayoff && S.dias.length > 1) playoffDias.add(S.dias.length - 1);
+
   // 1) Colocar primero los partidos fijados a mano, en su celda exacta.
   const fijados = new Set();
   for(const x of pend){
@@ -1555,25 +1561,88 @@ function generarGrilla(){
   const resto = pend.filter(x => !fijados.has(x.m.key));
   const manual = S.modoGrilla === 'manual';
 
-  // 2) Rellenar el resto respetando dependencias y sin cruzar parejas.
-  //    En modo manual esto no corre: sólo quedan los fijos, el resto va a "sin ubicar".
-  if(!manual) slots.forEach((s,si) => {
-    const ocupadas = new Set();
-    s.c.forEach(x => posiblesM(x.cat, x.m).forEach(p => ocupadas.add(p)));
-    while(s.c.length < (S.canchas||1)){
-      const i = resto.findIndex(x => {
-        if(posiblesM(x.cat, x.m).some(p => ocupadas.has(p))) return false;
-        return deps(x).every(k => hecho[k] !== undefined && hecho[k] < si);
+  if(!manual){
+    const ocupadasDe = s => { const o = new Set(); s.c.forEach(x => posiblesM(x.cat, x.m).forEach(p => o.add(p))); return o; };
+    const esPlayoffDia = di => playoffDias.has(di);
+
+    // 2) FASE DE GRUPOS: cada grupo entero, de corrido, en un mismo dia (nunca en dia de playoffs).
+    //    Grupo de 3 = 3 partidos seguidos (1 cancha). Grupo de 4 = 3 rondas de 2 en paralelo.
+    const enResto = new Set(resto.map(x => x.m.key));
+    const rondasDe = (cat, gr) => {
+      const ms = partidosGrupo(cat, gr).filter(m => enResto.has(m.key));
+      const maxR = Math.max(1, Math.floor(gr.p.length / 2));
+      const rounds = [];
+      ms.forEach(m => {
+        let ok = false;
+        for(const r of rounds){
+          if(r.length < maxR && r.every(x => x.a.v !== m.a.v && x.b.v !== m.a.v && x.a.v !== m.b.v && x.b.v !== m.b.v)){ r.push(m); ok = true; break; }
+        }
+        if(!ok) rounds.push([m]);
       });
-      if(i < 0) break;
-      const x = resto.splice(i,1)[0];
-      s.c.push(x);
-      posiblesM(x.cat, x.m).forEach(p => ocupadas.add(p));
-      hecho[x.m.key] = si;
+      return rounds;
+    };
+    const colocados = new Set();
+    S.cats.forEach(cat => gruposDe(cat).forEach(gr => {
+      const rounds = rondasDe(cat, gr);
+      if(!rounds.length) return;
+      const claves = new Set(gr.p.map(i => cat.id+':'+i));
+      for(let st = 0; st + rounds.length <= slots.length; st++){
+        const d0 = slots[st].di;
+        if(esPlayoffDia(d0)) continue;
+        let ok = true;
+        for(let r = 0; r < rounds.length; r++){
+          const s = slots[st + r];
+          if(!s || s.di !== d0){ ok = false; break; }
+          if(s.c.length + rounds[r].length > (S.canchas||1)){ ok = false; break; }
+          const oc = ocupadasDe(s);
+          let choca = false; claves.forEach(p => { if(oc.has(p)) choca = true; });
+          if(choca){ ok = false; break; }
+        }
+        if(!ok) continue;
+        rounds.forEach((rd, r) => rd.forEach(m => {
+          const x = resto.find(y => y.m.key === m.key);
+          if(!x) return;
+          slots[st + r].c.push(x);
+          hecho[m.key] = st + r;
+          colocados.add(m.key);
+        }));
+        break;
+      }
+    }));
+    for(let i = resto.length - 1; i >= 0; i--) if(colocados.has(resto[i].m.key)) resto.splice(i, 1);
+
+    // 3) PLAYOFFS: solo en dia(s) de playoffs; categorias menores primero (numero mas alto),
+    //    femenina antes que libre del mismo numero, y cada ronda despues de la anterior.
+    const catNum = nom => { const m = String(nom).match(/(\d+)/); return m ? +m[1] : 0; };
+    const esFem = nom => /fem/i.test(String(nom));
+    const offs = resto.filter(x => (x.m.ronda||0) >= 80);
+    offs.sort((a,b) => catNum(b.cat.nom) - catNum(a.cat.nom)
+      || ((esFem(b.cat.nom)?1:0) - (esFem(a.cat.nom)?1:0))
+      || (a.m.ronda - b.m.ronda) || a.m.id.localeCompare(b.m.id));
+    const offKeys = new Set(offs.map(x => x.m.key));
+    slots.forEach((s,si) => {
+      if(!sinDiaPlayoff || S.dias.length > 1){ if(!esPlayoffDia(s.di)) return; }
+      const ocupadas = ocupadasDe(s);
+      while(s.c.length < (S.canchas||1)){
+        const i = offs.findIndex(x => {
+          if(posiblesM(x.cat, x.m).some(p => ocupadas.has(p))) return false;
+          return deps(x).every(k => hecho[k] !== undefined && hecho[k] < si);
+        });
+        if(i < 0) break;
+        const x = offs.splice(i, 1)[0];
+        s.c.push(x);
+        posiblesM(x.cat, x.m).forEach(p => ocupadas.add(p));
+        hecho[x.m.key] = si;
+      }
+    });
+    const noPuestos = new Set(offs.map(x => x.m.key));
+    for(let i = resto.length - 1; i >= 0; i--){
+      const k = resto[i].m.key;
+      if(offKeys.has(k) && !noPuestos.has(k)) resto.splice(i, 1);
     }
-    // ordenar por cancha real (los fijos mandan su columna)
-    s.c.sort((a,b) => (a._col ?? 99) - (b._col ?? 99));
-  });
+    // Los grupos que no entraron enteros quedan sin ubicar a proposito: un grupo no se parte.
+    slots.forEach(s => s.c.sort((a,b) => (a._col ?? 99) - (b._col ?? 99)));
+  }
   else slots.forEach(s => s.c.sort((a,b) => (a._col ?? 99) - (b._col ?? 99)));
 
   SIN_UBICAR = resto.slice();
