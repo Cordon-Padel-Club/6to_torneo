@@ -67,7 +67,10 @@ input,select{font:inherit;}
 .bar-head b{color:#fff;}
 .prog{height:4px;background:rgba(255,255,255,.13);margin:6px 0 8px;position:relative;}
 .prog span{position:absolute;inset:0 auto 0 0;width:0;background:var(--red);transition:width .3s ease;}
-.tabs{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;}
+.tabs{display:flex;gap:5px;overflow-x:auto;scrollbar-width:thin;scrollbar-color:var(--red) rgba(255,255,255,.08);padding-bottom:5px;}
+.tabs::-webkit-scrollbar{height:6px;}
+.tabs::-webkit-scrollbar-track{background:rgba(255,255,255,.08);}
+.tabs::-webkit-scrollbar-thumb{background:var(--red);}
 .tabs::-webkit-scrollbar{display:none;}
 .tab{flex:0 0 auto;background:transparent;border:1px solid #454b52;color:#c6cbd0;font-family:var(--display);font-size:15px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;padding:5px 11px 4px;line-height:1.15;display:flex;align-items:center;gap:6px;}
 .tab:hover{border-color:#7d858d;color:#fff;}
@@ -127,9 +130,20 @@ body[data-tab="fin"] #validador,
 body[data-tab="fin"] #fixture,
 body[data-tab="fin"] #grilla,
 body[data-tab="fin"] #reglas{display:none;}
+/* grilla sólo en la pestaña Horarios */
+#grilla{display:none;}
+body[data-tab="hor"] #grilla{display:block;}
+body[data-tab="hor"] #ahora,
+body[data-tab="hor"] #mipareja,
+body[data-tab="hor"] #config,
+body[data-tab="hor"] #validador,
+body[data-tab="hor"] #fixture,
+body[data-tab="hor"] #fasesFinales,
+body[data-tab="hor"] #reglas{display:none;}
 .ff-cat{margin:0 0 24px;}
 .ff-cat-head{display:flex;align-items:center;gap:9px;font-family:var(--display);font-size:19px;font-weight:700;text-transform:uppercase;letter-spacing:.01em;color:var(--tinta);margin:0 0 10px;}
 .ff-dot{width:11px;height:11px;background:var(--cc,var(--red));flex:0 0 auto;}
+.lv-when{font-family:var(--mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--tinta-suave);padding:3px 8px;border-top:1px solid var(--linea);background:var(--pared-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .card-head{background:var(--pista);color:#fff;padding:7px 11px 6px;display:flex;align-items:baseline;justify-content:space-between;gap:8px;}
 .card-head h3{font-size:17px;font-weight:600;}
 .card-head .tagm{font-family:var(--mono);font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:#9aa1a8;text-align:right;}
@@ -603,7 +617,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v1.9 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v2.1 · Julio 2026</p>
   </div>
 </footer>
 
@@ -1339,13 +1353,16 @@ function renderTabs(){
   const ids = S.cats.map(c => c.id);
   // pestaña activa: en organizador se permite la de Configuración ('__cfg__')
   if(esOrg){
-    if(catActiva !== '__cfg__' && catActiva !== '__fin__' && !ids.includes(catActiva)) catActiva = '__cfg__';
+    if(catActiva !== '__cfg__' && catActiva !== '__fin__' && catActiva !== '__hor__' && !ids.includes(catActiva)) catActiva = '__cfg__';
   } else {
-    if(catActiva !== '__fin__' && !ids.includes(catActiva)) catActiva = ids.length ? ids[0] : null;
+    if(catActiva !== '__fin__' && catActiva !== '__hor__' && !ids.includes(catActiva)) catActiva = ids.length ? ids[0] : null;
   }
   let html = '';
   if(esOrg){
     html += `<button class="tab tab-cfg" role="tab" data-cat="__cfg__" style="--cc:var(--red)" aria-selected="${catActiva === '__cfg__'}"><span class="dot"></span>Configuración</button>`;
+  }
+  if(S.cats.length){
+    html += `<button class="tab tab-hor" role="tab" data-cat="__hor__" style="--cc:var(--red)" aria-selected="${catActiva === '__hor__'}"><span class="dot"></span>Horarios</button>`;
   }
   html += S.cats.map(c => {
     const n = partidosDe(c).length;
@@ -1355,7 +1372,7 @@ function renderTabs(){
     html += `<button class="tab tab-fin" role="tab" data-cat="__fin__" style="--cc:var(--red)" aria-selected="${catActiva === '__fin__'}"><span class="dot"></span>Playoffs</button>`;
   }
   $('#tabs').innerHTML = html;
-  document.body.setAttribute('data-tab', (esOrg && catActiva === '__cfg__') ? 'cfg' : ((catActiva === '__fin__') ? 'fin' : 'cat'));
+  document.body.setAttribute('data-tab', (esOrg && catActiva === '__cfg__') ? 'cfg' : (catActiva === '__fin__' ? 'fin' : (catActiva === '__hor__' ? 'hor' : 'cat')));
 }
 
 function inputSet(key, campo, ev, tb){
@@ -1833,7 +1850,7 @@ function renderMiPareja(){
 /* =====================================================================
    LLAVE (cuadro de eliminación, vista jugador)
    ===================================================================== */
-function bracketHTML(cat, est){
+function bracketHTML(cat, est, u){
   const nombreLado = lado => {
     const idx = resolver(cat, lado);
     if(idx !== null && idx !== undefined) return {txt: nombrePareja(cat, idx), pend:false};
@@ -1867,7 +1884,9 @@ function bracketHTML(cat, est){
       const m = nd.m, ev = evalPartido(cat, m), sets = setsDe(m);
       const hayRes = ev.estado === 'ok';
       const A = nombreLado(m.a), B = nombreLado(m.b);
-      nodos += `<div class="lv-node">${filaLado(A, sets, 0, hayRes ? ev.gan === 'a' : null, hayRes)}${filaLado(B, sets, 1, hayRes ? ev.gan === 'b' : null, hayRes)}</div>`;
+      const loc = u && u[m.key];
+      const cuando = `<div class="lv-when">${loc ? esc(loc.dia)+' '+esc(loc.hora)+(loc.cancha ? ' · Cancha '+esc(loc.cancha) : '') : 'Horario a confirmar'}</div>`;
+      nodos += `<div class="lv-node">${filaLado(A, sets, 0, hayRes ? ev.gan === 'a' : null, hayRes)}${filaLado(B, sets, 1, hayRes ? ev.gan === 'b' : null, hayRes)}${cuando}</div>`;
     });
     cols += `<div class="lv-col"><div class="lv-fase">${esc(rd.fase)}</div><div class="lv-nodos">${nodos}</div></div>`;
   });
@@ -1881,11 +1900,12 @@ function bracketHTML(cat, est){
 function renderFasesFinales(){
   const panel = document.getElementById('fasesPanel');
   if(!panel) return;
+  const u = ubicaciones();
   let html = '';
   S.cats.forEach(cat => {
     const est = construirLlave(cat);
     if(!est) return;
-    html += `<div class="ff-cat"><div class="ff-cat-head" style="--cc:${colorCat(cat)}"><span class="ff-dot"></span>${esc(cat.nom)}</div>${bracketHTML(cat, est)}</div>`;
+    html += `<div class="ff-cat"><div class="ff-cat-head" style="--cc:${colorCat(cat)}"><span class="ff-dot"></span>${esc(cat.nom)}</div>${bracketHTML(cat, est, u)}</div>`;
   });
   panel.innerHTML = html || `<p class="llave-vacia">Todav\u00eda no hay fases finales armadas.</p>`;
 }
