@@ -175,6 +175,15 @@ body[data-tab="hor"] #reglas{display:none;}
 .tools button:hover{border-color:var(--pista);}
 .tools button.danger:hover{border-color:var(--red);color:var(--red);}
 .io{width:100%;min-height:64px;font-family:var(--mono);font-size:11px;border:1px solid var(--linea);padding:8px;background:var(--pared);display:none;}
+#btnForm{border-color:var(--red);color:var(--red-osc);}
+.form-import{display:none;border:1px solid var(--red);background:#fff;padding:11px;margin:0 0 11px;}
+.form-import.on{display:block;}
+.fi-head{font-family:var(--mono);font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--red-osc);margin-bottom:9px;}
+.fi-cat{font-size:13px;padding:6px 0;border-top:1px solid var(--linea);}
+.fi-cat:first-of-type{border-top:0;}
+.fi-mue{font-size:11px;color:var(--tinta-suave);margin-top:2px;}
+.fi-warn{font-size:11px;color:var(--tinta-suave);margin:10px 0;line-height:1.45;}
+.fi-err{color:var(--red);font-size:13px;margin:0;}
 .io.on{display:block;}
 
 /* ---------- VALIDADOR ---------- */
@@ -559,7 +568,10 @@ body[data-rol="cliente"] .vs .n{display:none;}
       <button id="btnVacio" class="danger">Empezar de cero</button>
       <button id="btnExport">Exportar</button>
       <button id="btnImport">Importar</button>
+      <button id="btnForm">Importar formulario (CSV)</button>
     </div>
+    <input type="file" id="fileForm" accept=".csv,.tsv,.txt" style="display:none">
+    <div id="formImport" class="form-import"></div>
     <textarea class="io" id="io" spellcheck="false" placeholder="Pegá acá el texto exportado y volvé a tocar Importar."></textarea>
     <div id="cfgPanel"></div>
   </section>
@@ -617,7 +629,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v2.1 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v2.2 · Julio 2026</p>
   </div>
 </footer>
 
@@ -713,7 +725,7 @@ async function guardar(){
   try{ localStorage.setItem('padel:esqueleto', JSON.stringify(S)); }catch(e){}
   nubeGuardarDebounced();
 }
-function normalizar(o){ o.fijos = o.fijos || {}; o.nom = o.nom || {}; o.res = o.res || {}; o.modoGrilla = o.modoGrilla || 'auto'; o.cats = o.cats || []; o.dias = o.dias || []; o.fecha = o.fecha || ''; return o; }
+function normalizar(o){ o.fijos = o.fijos || {}; o.nom = o.nom || {}; o.disp = o.disp || {}; o.res = o.res || {}; o.modoGrilla = o.modoGrilla || 'auto'; o.cats = o.cats || []; o.dias = o.dias || []; o.fecha = o.fecha || ''; return o; }
 async function cargar(){
   try{
     let raw = null;
@@ -2065,7 +2077,7 @@ document.addEventListener('input', e => {
 });
 
 document.addEventListener('click', e => {
-  const b = e.target.closest('[data-act], [data-cat], [data-d], [data-mv], [data-drop], [data-unfix], [data-cancelmv], [data-clearfix], [data-modo], [data-verpub], [data-verorg], [data-pub], [data-copiar], [data-abrir], [data-cerrarpub], [data-descargar], [data-nubepub], [data-nubecopiar], [data-nubeabrir], [data-login], [data-logout]');
+  const b = e.target.closest('[data-act], [data-cat], [data-d], [data-mv], [data-drop], [data-unfix], [data-cancelmv], [data-clearfix], [data-modo], [data-verpub], [data-verorg], [data-pub], [data-copiar], [data-abrir], [data-cerrarpub], [data-descargar], [data-nubepub], [data-nubecopiar], [data-nubeabrir], [data-login], [data-logout], [data-impok], [data-impcancel]');
   if(!b) return;
   const d = b.dataset;
   if(d.descargar){ descargarArchivo(b); return; }
@@ -2081,6 +2093,8 @@ document.addEventListener('click', e => {
   if(d.nubeabrir){ window.open($('#nubeLink').value, '_blank'); return; }
   if(d.login){ authLogin(b); return; }
   if(d.logout){ authLogout(); return; }
+  if(d.impok){ confirmarFormulario(); return; }
+  if(d.impcancel){ importPend = null; const c = $('#formImport'); c.classList.remove('on'); c.innerHTML = ''; return; }
   if(d.abrir){ window.open($('#pubLink').value, '_blank'); return; }
   if(d.cat){ catActiva = d.cat; render(); return; }
   if(d.d !== undefined){ diaActivo = +d.d; renderGrilla(); return; }
@@ -2143,6 +2157,106 @@ $('#btnImport').onclick = () => {
     normalizar(d);
     S = d; catActiva = null; io.classList.remove('on'); guardar(); render();
   }catch(e){ alert('Ese texto no es una configuración válida. Copiá de nuevo lo que dio Exportar.'); }
+};
+
+/* ===================== IMPORTAR FORMULARIO (CSV) ===================== */
+let importPend = null;
+
+function parseCSV(text){
+  const rows = []; let row = [], cell = '', q = false;
+  text = String(text || '').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  for(let i = 0; i < text.length; i++){
+    const ch = text[i];
+    if(q){
+      if(ch === '"'){ if(text[i+1] === '"'){ cell += '"'; i++; } else q = false; }
+      else cell += ch;
+    } else {
+      if(ch === '"') q = true;
+      else if(ch === ','){ row.push(cell); cell = ''; }
+      else if(ch === '\n'){ row.push(cell); rows.push(row); row = []; cell = ''; }
+      else cell += ch;
+    }
+  }
+  if(cell !== '' || row.length){ row.push(cell); rows.push(row); }
+  return rows;
+}
+
+function parseBloques(s){
+  if(!s) return [];
+  return String(s).split(',').map(p => {
+    p = p.replace(/\s+/g,' ').trim().toUpperCase();
+    const m = p.match(/(JUEVES|VIERNES|S[ÁA]BADO)\s+(\d+)\s*A\s*(\d+)/);
+    if(!m) return null;
+    const dia = m[1][0] === 'S' ? 'SÁBADO' : m[1];
+    return dia + ' ' + (+m[2]) + '-' + (+m[3]);
+  }).filter(Boolean);
+}
+
+function tituloNom(s){
+  return String(s || '').replace(/\s+/g,' ').trim().split(' ')
+    .map(w => w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : '').join(' ');
+}
+
+function previewFormulario(text){
+  const cont = $('#formImport');
+  const rows = parseCSV(text).filter(r => r.some(c => (c||'').trim() !== ''));
+  if(rows.length < 2){ cont.innerHTML = `<p class="fi-err">No pude leer filas del archivo. ¿Es el CSV de respuestas del formulario?</p>`; cont.classList.add('on'); return; }
+  const H = rows[0].map(h => (h||'').toUpperCase());
+  const iCat  = H.findIndex(h => h.includes('CATEGOR'));
+  const iDisp = H.findIndex(h => h.includes('HORARIO') || h.includes('FASE DE GRUPOS') || h.includes('DISPONI'));
+  const iN1   = H.findIndex(h => h.includes('NOMBRE') && h.includes('JUGADOR 1'));
+  const iN2   = H.findIndex(h => h.includes('NOMBRE') && h.includes('JUGADOR 2'));
+  if(iCat < 0 || iN1 < 0 || iN2 < 0){
+    cont.innerHTML = `<p class="fi-err">No encontré las columnas esperadas (CATEGORÍA · NOMBRE JUGADOR 1 · NOMBRE JUGADOR 2). ¿Es el CSV del formulario?</p>`;
+    cont.classList.add('on'); return;
+  }
+  const cats = [], idx = {};
+  for(let r = 1; r < rows.length; r++){
+    const fila = rows[r];
+    const catNom = (fila[iCat]||'').replace(/\s+/g,' ').trim().toUpperCase();
+    if(!catNom) continue;
+    const n1 = tituloNom(fila[iN1]), n2 = tituloNom(fila[iN2]);
+    if(!n1 && !n2) continue;
+    const disp = iDisp >= 0 ? parseBloques(fila[iDisp]) : [];
+    if(!(catNom in idx)){ idx[catNom] = cats.length; cats.push({nom:catNom, parejas:[]}); }
+    cats[idx[catNom]].parejas.push({label:(n1 || '?') + ' / ' + (n2 || '?'), disp});
+  }
+  importPend = cats;
+  const total = cats.reduce((a,c) => a + c.parejas.length, 0);
+  let html = `<div class="fi-head">Vista previa: <b>${cats.length}</b> categorías · <b>${total}</b> parejas</div>`;
+  cats.forEach(c => {
+    const muestra = c.parejas.slice(0,3).map(p => esc(p.label)).join(' · ');
+    html += `<div class="fi-cat"><b>${esc(c.nom)}</b> — ${c.parejas.length} parejas<div class="fi-mue">${muestra}${c.parejas.length > 3 ? ' · …' : ''}</div></div>`;
+  });
+  html += `<p class="fi-warn">Esto reemplaza las categorías y parejas actuales. Se mantienen torneo, fechas, canchas y reglas. La disponibilidad de cada pareja se guarda para armar grupos y horarios más adelante.</p>
+    <div class="pub-btns"><button data-impok="1" class="pub-main">Confirmar importación</button><button data-impcancel="1">Cancelar</button></div>`;
+  cont.innerHTML = html; cont.classList.add('on');
+}
+
+function confirmarFormulario(){
+  if(!importPend) return;
+  const nom = {}, disp = {}, cats = [];
+  importPend.forEach(c => {
+    const cat = catNueva(c.nom, c.parejas.length, 'llave');
+    cats.push(cat);
+    c.parejas.forEach((p, i) => {
+      nom[cat.id+':'+i] = p.label;
+      if(p.disp && p.disp.length) disp[cat.id+':'+i] = p.disp;
+    });
+  });
+  S.cats = cats; S.nom = nom; S.disp = disp; S.res = {}; S.fijos = {};
+  importPend = null;
+  const cont = $('#formImport'); cont.classList.remove('on'); cont.innerHTML = '';
+  catActiva = '__cfg__'; guardar(); render();
+}
+
+$('#btnForm').onclick = () => $('#fileForm').click();
+$('#fileForm').onchange = (e) => {
+  const f = e.target.files && e.target.files[0]; if(!f) return;
+  const rd = new FileReader();
+  rd.onload = () => { previewFormulario(rd.result); e.target.value = ''; };
+  rd.onerror = () => { const c = $('#formImport'); c.innerHTML = '<p class="fi-err">No pude leer el archivo.</p>'; c.classList.add('on'); };
+  rd.readAsText(f, 'utf-8');
 };
 
 /* ---- rol / publicación ---- */
