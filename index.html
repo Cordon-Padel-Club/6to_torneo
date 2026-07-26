@@ -300,7 +300,6 @@ table.gr td{border:1px solid var(--linea-suave);padding:5px;vertical-align:top;}
 table.gr td.h{font-family:var(--mono);font-size:11px;background:var(--pared-2);width:54px;text-align:center;}
 .slot{line-height:1.25;}
 .slot .c{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:#fff;background:var(--cc,var(--pista));padding:1px 4px;display:inline-block;}
-.slot .c.f{filter:brightness(.72);}
 .slot .m{display:block;margin-top:2px;font-size:12px;}
 .slot .duo{display:block;margin-top:3px;font-size:12px;line-height:1.3;color:var(--tinta);}
 .slot .duo .vsx{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-suave);padding:0 2px;}
@@ -630,7 +629,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v2.6 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v2.7 · Julio 2026</p>
   </div>
 </footer>
 
@@ -1694,9 +1693,10 @@ function renderGrilla(){
     const min = ahoraMin(), hoy = diaDeHoy();
     const filas = GRILLA.filter(s => s.di === diaActivo).map(s => {
       const enFranja = hoy !== null && s.di === hoy && min >= h2min(s.hora) && min < h2min(s.hora) + franjaLargo(hoy);
+      const colMap = colsDe(s);
       let tds = '';
       for(let c = 0; c < (S.canchas||1); c++){
-        const x = s.c.find((y,idx) => (y._col ?? idx) === c) || s.c[c];
+        const x = colMap[c];
         if(!x){ tds += `<td><div class="slot empty">—</div></td>`; continue; }
         const ev = evalPartido(x.cat, x.m);
         const mia = miPareja && [x.m.a,x.m.b].some(l => miPareja === x.cat.id+':'+resolver(x.cat,l));
@@ -1737,10 +1737,11 @@ function renderGrilla(){
   const cols = Array.from({length:S.canchas||1}, (_,i) => `<th>Cancha ${i+1}</th>`).join('');
 
   const filas = GRILLA.filter(s => s.di === diaActivo).map(s => {
+    const colMap = colsDe(s);
     let tds = '';
     for(let c = 0; c < (S.canchas||1); c++){
       const cell = `${s.di}|${s.hora}|${c}`;
-      const x = s.c.find((y,idx) => (y._col ?? idx) === c) || s.c[c];
+      const x = colMap[c];
       const libre = !x;
       if(moviendo && libre){
         tds += `<td data-cell="${cell}"><button class="drop" data-drop="${cell}">soltar acá</button></td>`;
@@ -1750,7 +1751,7 @@ function renderGrilla(){
       const fijo = S.fijos && S.fijos[x.m.key];
       const activo = moviendo && moviendo.mkey === x.m.key;
       const quitar = manual
-        ? `<button class="mv unfix" data-unfix="${x.m.key}" title="Sacar de la grilla">quitar</button>`
+        ? `<button class="mv unfix" data-unfix="${x.m.key}" title="Sacar de la grilla (vuelve a la bandeja)">✕</button>`
         : (fijo ? `<button class="mv unfix" data-unfix="${x.m.key}" title="Volver a automático">auto</button>` : '');
       tds += `<td data-cell="${cell}"><div class="slot${activo ? ' moving' : ''}" data-drag="${x.cat.id}|${x.m.key}" style="--cc:${colorCat(x.cat)}">
         <span class="c${x.m.gr ? '' : ' f'}">${esc(x.cat.nom)}</span>
@@ -1832,10 +1833,24 @@ function renderProg(){
 // mapa mkey -> {di, dia, hora, cancha, slotIdx global}
 function ubicaciones(){
   const u = {};
-  GRILLA.forEach((s,si) => s.c.forEach((x,idx) => {
-    u[x.m.key] = {di:s.di, dia:s.dia, hora:s.hora, cancha:(x._col ?? idx)+1, si, cat:x.cat, m:x.m};
+  GRILLA.forEach((s,si) => colsDe(s).forEach((x,c) => {
+    if(x) u[x.m.key] = {di:s.di, dia:s.dia, hora:s.hora, cancha:c+1, si, cat:x.cat, m:x.m};
   }));
   return u;
+}
+/* asigna columna (cancha) a cada partido del slot: los fijos van a la suya, el resto llena los huecos */
+function colsDe(s){
+  const n = S.canchas || 1;
+  const map = new Array(n).fill(null);
+  const sin = [];
+  s.c.forEach(x => {
+    const col = x._col;
+    if(col != null && col >= 0 && col < n && !map[col]) map[col] = x;
+    else sin.push(x);
+  });
+  let c = 0;
+  sin.forEach(x => { while(c < n && map[c]) c++; if(c < n){ map[c] = x; c++; } });
+  return map;
 }
 function ahoraMin(){ const d = new Date(); return d.getHours()*60 + d.getMinutes(); }
 function franjaLargo(di){ const dd = S.dias[di]; return dd ? Math.max(20, +dd.franja||60) : 60; }
