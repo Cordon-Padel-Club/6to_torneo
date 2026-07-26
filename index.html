@@ -629,7 +629,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v2.3 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v2.4 · Julio 2026</p>
   </div>
 </footer>
 
@@ -1564,9 +1564,31 @@ function generarGrilla(){
   if(!manual){
     const ocupadasDe = s => { const o = new Set(); s.c.forEach(x => posiblesM(x.cat, x.m).forEach(p => o.add(p))); return o; };
     const esPlayoffDia = di => playoffDias.has(di);
+    const modoForms = S.modoGrilla === 'forms';
 
-    // 2) FASE DE GRUPOS: cada grupo entero, de corrido, en un mismo dia (nunca en dia de playoffs).
-    //    Grupo de 3 = 3 partidos seguidos (1 cancha). Grupo de 4 = 3 rondas de 2 en paralelo.
+    // bloques horarios de 3 hs anclados a las 8:00 (como el formulario: 8-11, 11-14, 14-17, 17-20, 20-23)
+    const normTxt = t => String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+    const bloqueSlot = s => {
+      const h = Math.floor(h2min(s.hora) / 60);
+      const b = Math.floor((h - 8) / 3);
+      const h1 = 8 + b * 3;
+      return {key: s.di + ':' + b, label: normTxt(s.dia).split(' ')[0] + ' ' + h1 + '-' + (h1 + 3)};
+    };
+    // bloques permitidos para un grupo (modo forms): interseccion de la disponibilidad de sus parejas
+    const bloquesGrupo = (cat, gr) => {
+      let permit = null;   // null = sin restriccion (nadie del grupo cargo disponibilidad)
+      gr.p.forEach(i => {
+        const d = S.disp && S.disp[cat.id + ':' + i];
+        if(d && d.length){
+          const set = new Set(d.map(x => normTxt(x).replace(/\s+/g, ' ').trim()));
+          permit = permit === null ? set : new Set([...permit].filter(x => set.has(x)));
+        }
+      });
+      return permit;
+    };
+
+    // 2) FASE DE GRUPOS: cada grupo entero, de corrido, dentro de UN MISMO BLOQUE horario
+    //    (nunca en dia de playoffs). Grupo de 3 = 3 partidos seguidos; grupo de 4 = 3 rondas de 2.
     const enResto = new Set(resto.map(x => x.m.key));
     const rondasDe = (cat, gr) => {
       const ms = partidosGrupo(cat, gr).filter(m => enResto.has(m.key));
@@ -1586,13 +1608,18 @@ function generarGrilla(){
       const rounds = rondasDe(cat, gr);
       if(!rounds.length) return;
       const claves = new Set(gr.p.map(i => cat.id+':'+i));
+      const permit = modoForms ? bloquesGrupo(cat, gr) : null;
+      if(modoForms && permit && permit.size === 0) return;   // sin bloque comun: queda en bandeja
       for(let st = 0; st + rounds.length <= slots.length; st++){
         const d0 = slots[st].di;
         if(esPlayoffDia(d0)) continue;
+        const b0 = bloqueSlot(slots[st]);
+        if(modoForms && permit && !permit.has(b0.label)) continue;
         let ok = true;
         for(let r = 0; r < rounds.length; r++){
           const s = slots[st + r];
           if(!s || s.di !== d0){ ok = false; break; }
+          if(bloqueSlot(s).key !== b0.key){ ok = false; break; }   // no cruzar de bloque
           if(s.c.length + rounds[r].length > (S.canchas||1)){ ok = false; break; }
           const oc = ocupadasDe(s);
           let choca = false; claves.forEach(p => { if(oc.has(p)) choca = true; });
@@ -1681,17 +1708,22 @@ function renderGrilla(){
   }
 
   const manual = S.modoGrilla === 'manual';
+  const forms = S.modoGrilla === 'forms';
+  const hayDisp = S.disp && Object.keys(S.disp).length > 0;
 
   // Barra de modo
   const modoBar = `<div class="modo-bar">
     <span class="modo-lbl">Grilla</span>
     <div class="seg">
-      <button class="${!manual ? 'on' : ''}" data-modo="auto">Automática</button>
+      <button class="${!manual && !forms ? 'on' : ''}" data-modo="auto">Automática</button>
+      ${hayDisp ? `<button class="${forms ? 'on' : ''}" data-modo="forms">Formulario</button>` : ''}
       <button class="${manual ? 'on' : ''}" data-modo="manual">Manual</button>
     </div>
     <span class="modo-hint">${manual
       ? 'Vos ubicás cada partido: tocá uno de la bandeja y soltalo en una franja libre.'
-      : 'El motor acomoda todo solo. Igual podés mover partidos puntuales con ⇄.'}</span>
+      : forms
+        ? 'Cada grupo se ubica en un bloque horario donde TODAS sus parejas marcaron disponibilidad en el formulario. Lo que no cierra queda en la bandeja.'
+        : 'El motor acomoda todo solo. Igual podés mover partidos puntuales con ⇄.'}</span>
   </div>`;
 
   $('#dayTabs').innerHTML = S.dias.map((d,i) => `<button data-d="${i}" aria-selected="${i === diaActivo}">${esc(d.nom)}</button>`).join('');
