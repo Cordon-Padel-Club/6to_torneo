@@ -267,6 +267,10 @@ footer{background:var(--pista);color:#8d949c;margin-top:32px;padding:20px 0 26px
 footer .note{font-size:13px;margin:0 0 9px;}
 footer .note b{color:#fff;}
 footer .sig{font-family:var(--mono);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:#5e666e;margin:13px 0 0;}
+.foot-social{display:flex;gap:14px;align-items:center;margin:14px 0 0;}
+.foot-social a{display:inline-flex;width:34px;height:34px;align-items:center;justify-content:center;transition:transform .12s ease, opacity .12s ease;}
+.foot-social a:hover{transform:translateY(-2px);}
+.foot-social svg{width:27px;height:27px;display:block;}
 
 @media (max-width:640px){
   .stats{grid-template-columns:repeat(2,1fr);}
@@ -543,7 +547,21 @@ body[data-rol="cliente"] .vs .n{display:none;}
       <p class="note"><b>Fase final.</b> Se calcula sola: clasificados = grupos × cupos + repechaje. Si el número no es potencia de 2, el validador te lo marca y te dice cuánto falta o sobra.</p>
       <p class="note"><b>Guardado.</b> Se guarda solo si el visor lo permite. Antes de cerrar, usá Exportar y quedate con el texto.</p>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v1.4 · Julio 2026</p>
+    <div class="foot-social">
+      <a href="https://www.instagram.com/cordonpadelclub/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" title="Instagram">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><defs><radialGradient id="igGrad" cx="0.3" cy="1.05" r="1.15"><stop offset="0" stop-color="#fed576"/><stop offset="0.25" stop-color="#f47133"/><stop offset="0.55" stop-color="#bc3081"/><stop offset="1" stop-color="#4c63d2"/></radialGradient></defs><rect x="2" y="2" width="20" height="20" rx="5.5" fill="url(#igGrad)"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="#fff" stroke-width="1.8"/><circle cx="17.2" cy="6.8" r="1.25" fill="#fff"/></svg>
+      </a>
+      <a href="https://youtube.com/@cordonpadel?si=gX-c3VGipNfYVeyq" target="_blank" rel="noopener noreferrer" aria-label="YouTube" title="YouTube">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1.5" y="5.2" width="21" height="13.6" rx="4" fill="#FF0000"/><path d="M10 8.6 L16 12 L10 15.4 Z" fill="#fff"/></svg>
+      </a>
+      <a href="https://tr.ee/n1OVlociwT" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" title="WhatsApp">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#25D366"/><path fill="#fff" d="M16.7 13.9c-.28-.14-1.65-.81-1.9-.9-.26-.09-.44-.14-.63.14-.18.28-.72.9-.88 1.08-.16.18-.32.2-.6.07-.28-.14-1.18-.43-2.24-1.38-.83-.74-1.39-1.65-1.55-1.93-.16-.28-.02-.43.12-.57.13-.13.28-.32.42-.49.14-.16.18-.28.28-.47.09-.18.05-.35-.02-.49-.07-.14-.63-1.51-.86-2.07-.23-.55-.46-.47-.63-.48-.16-.01-.35-.01-.53-.01-.18 0-.49.07-.74.35-.26.28-.97.95-.97 2.32 0 1.37 1 2.69 1.14 2.87.14.18 1.96 3 4.76 4.2.66.29 1.18.46 1.59.59.67.21 1.27.18 1.75.11.53-.08 1.65-.67 1.88-1.32.23-.65.23-1.2.16-1.32-.07-.12-.25-.18-.53-.32z"/></svg>
+      </a>
+      <a href="https://maps.app.goo.gl/4aKp2i6m83U2d5Vs5" target="_blank" rel="noopener noreferrer" aria-label="Ubicación" title="Cómo llegar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#EA4335" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.6" fill="#fff"/></svg>
+      </a>
+    </div>
+    <p class="sig" id="footSig">Esqueleto de torneo · v1.5 · Julio 2026</p>
   </div>
 </footer>
 
