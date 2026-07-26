@@ -118,12 +118,15 @@ section{margin:24px 0;}
 .lv-champ.lv-pend .lv-nm{color:#fff;font-style:normal;font-size:14px;}
 .lv-champ-ico{font-size:17px;flex:0 0 auto;}
 .lv-champ.lv-pend{background:var(--pista);}
-body[data-rol="cliente"] #fasesFinales{display:none;}
-body[data-rol="cliente"][data-tab="fin"] #fasesFinales{display:block;}
-body[data-rol="cliente"][data-tab="fin"] #ahora,
-body[data-rol="cliente"][data-tab="fin"] #fixture,
-body[data-rol="cliente"][data-tab="fin"] #grilla,
-body[data-rol="cliente"][data-tab="fin"] #reglas{display:none;}
+#fasesFinales{display:none;}
+body[data-tab="fin"] #fasesFinales{display:block;}
+body[data-tab="fin"] #ahora,
+body[data-tab="fin"] #mipareja,
+body[data-tab="fin"] #config,
+body[data-tab="fin"] #validador,
+body[data-tab="fin"] #fixture,
+body[data-tab="fin"] #grilla,
+body[data-tab="fin"] #reglas{display:none;}
 .ff-cat{margin:0 0 24px;}
 .ff-cat-head{display:flex;align-items:center;gap:9px;font-family:var(--display);font-size:19px;font-weight:700;text-transform:uppercase;letter-spacing:.01em;color:var(--tinta);margin:0 0 10px;}
 .ff-dot{width:11px;height:11px;background:var(--cc,var(--red));flex:0 0 auto;}
@@ -529,8 +532,8 @@ body[data-rol="cliente"] .vs .n{display:none;}
     <div id="miPanel"></div>
   </section>
 
-  <section id="fasesFinales" class="cli-only">
-    <div class="sec-head"><span class="n">🏆</span><h2>Fases finales</h2><span class="rule"></span></div>
+  <section id="fasesFinales">
+    <div class="sec-head"><span class="n">🏆</span><h2>Playoffs</h2><span class="rule"></span></div>
     <div id="fasesPanel"></div>
   </section>
 
@@ -600,7 +603,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v1.8 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v1.9 · Julio 2026</p>
   </div>
 </footer>
 
@@ -1336,7 +1339,7 @@ function renderTabs(){
   const ids = S.cats.map(c => c.id);
   // pestaña activa: en organizador se permite la de Configuración ('__cfg__')
   if(esOrg){
-    if(catActiva !== '__cfg__' && !ids.includes(catActiva)) catActiva = '__cfg__';
+    if(catActiva !== '__cfg__' && catActiva !== '__fin__' && !ids.includes(catActiva)) catActiva = '__cfg__';
   } else {
     if(catActiva !== '__fin__' && !ids.includes(catActiva)) catActiva = ids.length ? ids[0] : null;
   }
@@ -1348,11 +1351,11 @@ function renderTabs(){
     const n = partidosDe(c).length;
     return `<button class="tab${n ? '' : ' void'}" role="tab" data-cat="${c.id}" style="--cc:${colorCat(c)}" aria-selected="${c.id === catActiva}"><span class="dot"></span>${esc(c.nom)}<i>${n}</i></button>`;
   }).join('');
-  if(!esOrg && S.cats.length){
-    html += `<button class="tab tab-fin" role="tab" data-cat="__fin__" style="--cc:var(--red)" aria-selected="${catActiva === '__fin__'}"><span class="dot"></span>Fases finales</button>`;
+  if(S.cats.length){
+    html += `<button class="tab tab-fin" role="tab" data-cat="__fin__" style="--cc:var(--red)" aria-selected="${catActiva === '__fin__'}"><span class="dot"></span>Playoffs</button>`;
   }
   $('#tabs').innerHTML = html;
-  document.body.setAttribute('data-tab', (esOrg && catActiva === '__cfg__') ? 'cfg' : ((!esOrg && catActiva === '__fin__') ? 'fin' : 'cat'));
+  document.body.setAttribute('data-tab', (esOrg && catActiva === '__cfg__') ? 'cfg' : ((catActiva === '__fin__') ? 'fin' : 'cat'));
 }
 
 function inputSet(key, campo, ev, tb){
@@ -1767,20 +1770,20 @@ function renderAhora(){
 }
 
 function renderMiPareja(){
-  // armado del selector
-  const opts = ['<option value="">— Elegí tu categoría y pareja —</option>'];
-  S.cats.filter(c => c.parejas > 1).forEach(c => {
-    for(let i = 0; i < c.parejas; i++){
-      const key = c.id+':'+i;
-      opts.push(`<option value="${key}"${miPareja === key ? ' selected' : ''}>${esc(c.nom)} · ${esc(nombrePareja(c,i))}</option>`);
+  const cat = S.cats.find(c => c.id === catActiva);
+  // el selector muestra sólo las parejas de la categoría de la pestaña actual
+  const opts = ['<option value="">— Elegí tu pareja —</option>'];
+  if(cat && cat.parejas > 1){
+    for(let i = 0; i < cat.parejas; i++){
+      const key = cat.id+':'+i;
+      opts.push(`<option value="${key}"${miPareja === key ? ' selected' : ''}>${esc(nombrePareja(cat,i))}</option>`);
     }
-  });
+  }
   let html = `<div class="pick"><select id="pickPareja">${opts.join('')}</select></div>`;
 
-  if(miPareja){
-    const [cid, idxs] = miPareja.split(':'); const idx = +idxs;
-    const cat = S.cats.find(c => c.id === cid);
-    if(cat){
+  if(miPareja && cat && miPareja.split(':')[0] === cat.id){
+    const idx = +miPareja.split(':')[1];
+    {
       const u = ubicaciones();
       // todos los partidos donde esta pareja aparece (directo o resoluble)
       const mios = partidosDe(cat).map(m => {
@@ -1915,8 +1918,9 @@ function render(){
   $('#tFecha').value = S.fecha || '';
   renderTabs(); renderCat();
   generarGrilla(); renderGrilla(); renderReglas(); renderProg();
+  renderFasesFinales();
   if(ROL === 'org'){ renderCfg(); renderDiag(); }
-  else { renderAhora(); renderMiPareja(); renderFasesFinales(); }
+  else { renderAhora(); renderMiPareja(); }
   if(f){
     const el = document.querySelector('[data-fid="'+f.replace(/"/g,'')+'"]');
     if(el){ el.focus(); try{ el.setSelectionRange(ss,se); }catch(e){} }
@@ -2176,7 +2180,6 @@ function togglePub(){
 document.addEventListener('change', e => {
   if(e.target && e.target.id === 'pickPareja'){
     miPareja = e.target.value || null;
-    if(miPareja){ catActiva = miPareja.split(':')[0]; }
     render();
   }
 });
