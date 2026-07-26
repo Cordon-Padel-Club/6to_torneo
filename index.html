@@ -93,6 +93,31 @@ section{margin:24px 0;}
 
 /* ---------- CARDS ---------- */
 .card{background:var(--pared);border:1px solid var(--linea);margin:0 0 11px;}
+/* ---- Llave / cuadro de eliminación (vista jugador) ---- */
+.lv-scroll{overflow-x:auto;overflow-y:hidden;padding:2px 0 12px;-webkit-overflow-scrolling:touch;}
+.lv-bracket{display:flex;align-items:stretch;min-width:min-content;}
+.lv-col{display:flex;flex-direction:column;min-width:156px;padding-right:26px;}
+.lv-col-camp{padding-right:0;min-width:148px;}
+.lv-fase{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--tinta-suave);padding:0 0 9px 2px;white-space:nowrap;}
+.lv-nodos{flex:1;display:flex;flex-direction:column;justify-content:space-around;gap:10px;}
+.lv-node{background:#fff;border:1px solid var(--linea);position:relative;}
+.lv-col:not(.lv-col-camp) .lv-node::after,.lv-col:not(.lv-col-camp) .lv-byebox::after{content:"";position:absolute;right:-26px;top:50%;width:26px;height:1px;background:var(--linea);}
+.lv-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;font-size:13px;line-height:1.15;min-height:16px;}
+.lv-row + .lv-row{border-top:1px solid var(--linea);}
+.lv-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.lv-win{font-weight:700;}
+.lv-lose .lv-nm{color:var(--tinta-suave);}
+.lv-pend .lv-nm{color:var(--tinta-suave);font-style:italic;font-size:12px;}
+.lv-scs{display:flex;gap:5px;flex:0 0 auto;}
+.lv-sc{font-family:var(--mono);font-size:12px;min-width:11px;text-align:center;color:var(--tinta-suave);}
+.lv-win .lv-sc{color:var(--red);font-weight:700;}
+.lv-tag{font-family:var(--mono);font-size:8px;letter-spacing:.1em;color:#fff;background:var(--tinta-suave);padding:1px 6px;flex:0 0 auto;}
+.lv-byebox{background:var(--pared-2);}
+.lv-champ{display:flex;align-items:center;gap:9px;background:var(--red);color:#fff;padding:11px 12px;font-weight:700;font-size:14px;}
+.lv-champ .lv-nm{color:#fff;}
+.lv-champ.lv-pend .lv-nm{color:#fff;font-style:normal;font-size:14px;}
+.lv-champ-ico{font-size:17px;flex:0 0 auto;}
+.lv-champ.lv-pend{background:var(--pista);}
 .card-head{background:var(--pista);color:#fff;padding:7px 11px 6px;display:flex;align-items:baseline;justify-content:space-between;gap:8px;}
 .card-head h3{font-size:17px;font-weight:600;}
 .card-head .tagm{font-family:var(--mono);font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:#9aa1a8;text-align:right;}
@@ -495,6 +520,11 @@ body[data-rol="cliente"] .vs .n{display:none;}
     <div id="miPanel"></div>
   </section>
 
+  <section id="llaveSec" class="cli-only">
+    <div class="sec-head"><span class="n">🏆</span><h2>Llave</h2><span class="rule"></span></div>
+    <div id="llavePanel"></div>
+  </section>
+
   <!-- ===================== ORGANIZADOR ===================== -->
   <section id="config" class="org-only">
     <div class="sec-head"><span class="n">CFG</span><h2>Configuración</h2><span class="rule"></span></div>
@@ -561,7 +591,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v1.6 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v1.7 · Julio 2026</p>
   </div>
 </footer>
 
@@ -764,7 +794,7 @@ function nubeSuscribir(slug){
             const row = payload && payload.new;
             if(row && row.estado){
               S = expandir(row.estado);
-              render(); renderAhora(); renderMiPareja(); renderGrilla();
+              render(); renderAhora(); renderMiPareja(); renderLlave(); renderGrilla();
               const b = document.getElementById('envivo');
               if(b){ b.classList.add('pulse'); setTimeout(()=>b.classList.remove('pulse'), 900); }
             }
@@ -948,9 +978,9 @@ function seedsRepechaje(a){
   return seeds;
 }
 
-function partidosLlave(cat){
+function construirLlave(cat){
   const a = analisisLlave(cat);
-  if(!a.valida || a.Q < 2) return [];
+  if(!a.valida || a.Q < 2) return null;
   // sembrados por posición (todos los 1º, luego 2º, ...) + repechaje al final (peor sembrados)
   const seeds = [];
   for(let n = 1; n <= a.pasan; n++) a.grs.forEach(gr => seeds.push({t:'pos', g:gr.g, n}));
@@ -979,22 +1009,32 @@ function partidosLlave(cat){
   }
 
   // construir rondas: los BYE hacen avanzar directo al sembrado; el resto son partidos
-  const out = [];
+  const rounds = [];
   let feeders = slot.slice(), ronda = 0;
   for(let size = S; size >= 2; size /= 2){
-    const pref = CLAVE_FASE(size), fase = NOMBRE_FASE(size), n = size / 2, next = [];
+    const pref = CLAVE_FASE(size), fase = NOMBRE_FASE(size), n = size / 2, next = [], nodos = [];
     let mnum = 0;
     for(let i = 0; i < n; i++){
       const A = feeders[2*i], Bl = feeders[2*i+1];
-      if(A && Bl == null){ next.push(A); continue; }   // A pasa con BYE
-      if(Bl && A == null){ next.push(Bl); continue; }   // B pasa con BYE
+      if(A && Bl == null){ nodos.push({tipo:'bye', lado:A, fase}); next.push(A); continue; }
+      if(Bl && A == null){ nodos.push({tipo:'bye', lado:Bl, fase}); next.push(Bl); continue; }
       mnum++;
       const id = size === 2 ? 'FIN' : pref + mnum;
-      out.push({key:cat.id+'-'+id, id, gr:null, fase, a:A, b:Bl, ronda:80+ronda});
+      const m = {key:cat.id+'-'+id, id, gr:null, fase, a:A, b:Bl, ronda:80+ronda};
+      nodos.push({tipo:'match', m});
       next.push({t:'g', v:id});
     }
+    rounds.push({fase, size, nodos});
     feeders = next; ronda++;
   }
+  return {a, S, rounds};
+}
+
+function partidosLlave(cat){
+  const est = construirLlave(cat);
+  if(!est) return [];
+  const out = [];
+  est.rounds.forEach(r => r.nodos.forEach(nd => { if(nd.tipo === 'match') out.push(nd.m); }));
   return out;
 }
 
@@ -1773,6 +1813,61 @@ function renderMiPareja(){
   $('#miPanel').innerHTML = html;
 }
 
+/* =====================================================================
+   LLAVE (cuadro de eliminación, vista jugador)
+   ===================================================================== */
+function renderLlave(){
+  const panel = document.getElementById('llavePanel');
+  const sec = document.getElementById('llaveSec');
+  if(!panel || !sec) return;
+  const cat = S.cats.find(c => c.id === catActiva);
+  const est = cat ? construirLlave(cat) : null;
+  if(!est){ sec.style.display = 'none'; panel.innerHTML = ''; return; }
+  sec.style.display = '';
+
+  const nombreLado = lado => {
+    const idx = resolver(cat, lado);
+    if(idx !== null && idx !== undefined) return {txt: nombrePareja(cat, idx), pend:false};
+    return {txt: textoLado(cat, lado) || '—', pend:true};
+  };
+  const setsDe = m => {
+    const r = S.res[m.key] || {}, sets = [];
+    [['s1a','s1b'],['s2a','s2b'],['s3a','s3b']].forEach(([ka,kb]) => {
+      if(r[ka] != null && r[ka] !== '' && r[kb] != null && r[kb] !== '') sets.push([r[ka], r[kb]]);
+    });
+    return sets;
+  };
+  const filaLado = (info, sets, side, gan, hayRes) => {
+    const cls = gan === true ? 'lv-win' : (gan === false && hayRes ? 'lv-lose' : '');
+    const scs = sets.map(s => `<span class="lv-sc">${esc(s[side])}</span>`).join('');
+    return `<div class="lv-row ${cls} ${info.pend ? 'lv-pend' : ''}"><span class="lv-nm">${esc(info.txt)}</span><span class="lv-scs">${scs}</span></div>`;
+  };
+
+  let cols = '';
+  est.rounds.forEach(rd => {
+    let nodos = '';
+    rd.nodos.forEach(nd => {
+      if(nd.tipo === 'bye'){
+        const L = nombreLado(nd.lado);
+        nodos += `<div class="lv-node lv-byebox"><div class="lv-row lv-win ${L.pend ? 'lv-pend' : ''}"><span class="lv-nm">${esc(L.txt)}</span><span class="lv-tag">BYE</span></div></div>`;
+        return;
+      }
+      const m = nd.m, ev = evalPartido(cat, m), sets = setsDe(m);
+      const hayRes = ev.estado === 'ok';
+      const A = nombreLado(m.a), B = nombreLado(m.b);
+      nodos += `<div class="lv-node">${filaLado(A, sets, 0, hayRes ? ev.gan === 'a' : null, hayRes)}${filaLado(B, sets, 1, hayRes ? ev.gan === 'b' : null, hayRes)}</div>`;
+    });
+    cols += `<div class="lv-col"><div class="lv-fase">${esc(rd.fase)}</div><div class="lv-nodos">${nodos}</div></div>`;
+  });
+
+  const finN = est.rounds[est.rounds.length-1].nodos.find(n => n.tipo === 'match');
+  let campTxt = 'Se define en la final', campPend = true;
+  if(finN){ const ev = evalPartido(cat, finN.m); if(ev.estado === 'ok' && ev.gid != null){ campTxt = nombrePareja(cat, ev.gid); campPend = false; } }
+  cols += `<div class="lv-col lv-col-camp"><div class="lv-fase">Campeón</div><div class="lv-nodos"><div class="lv-champ ${campPend ? 'lv-pend' : ''}"><span class="lv-champ-ico">🏆</span><span class="lv-nm">${esc(campTxt)}</span></div></div></div>`;
+
+  panel.innerHTML = `<div class="lv-scroll"><div class="lv-bracket">${cols}</div></div>`;
+}
+
 function aplicarRol(){
   document.body.setAttribute('data-rol', ROL);
   document.body.setAttribute('data-solo', SOLO_JUGADOR ? '1' : '0');
@@ -1802,7 +1897,7 @@ function render(){
   renderTabs(); renderCat();
   generarGrilla(); renderGrilla(); renderReglas(); renderProg();
   if(ROL === 'org'){ renderCfg(); renderDiag(); }
-  else { renderAhora(); renderMiPareja(); }
+  else { renderAhora(); renderMiPareja(); renderLlave(); }
   if(f){
     const el = document.querySelector('[data-fid="'+f.replace(/"/g,'')+'"]');
     if(el){ el.focus(); try{ el.setSelectionRange(ss,se); }catch(e){} }
@@ -2097,10 +2192,10 @@ function leerEmbed(){
     const ok = await nubeLeerCliente(slug);
     if(ok){
       ROL = 'cliente'; SOLO_JUGADOR = true; NUBE.slug = slug; NUBE.on = true;
-      render(); renderAhora(); renderMiPareja(); renderGrilla();
+      render(); renderAhora(); renderMiPareja(); renderLlave(); renderGrilla();
       badgeEnVivo(true);
       nubeSuscribir(slug);
-      relojTimer = setInterval(() => { if(ROL === 'cliente'){ renderAhora(); renderMiPareja(); renderGrilla(); } }, 60000);
+      relojTimer = setInterval(() => { if(ROL === 'cliente'){ renderAhora(); renderMiPareja(); renderLlave(); renderGrilla(); } }, 60000);
       return;
     }
     // el torneo no existe en la nube: seguimos abajo
@@ -2111,7 +2206,7 @@ function leerEmbed(){
   if(desde){
     S = desde; ROL = 'cliente'; SOLO_JUGADOR = true;
     render();
-    relojTimer = setInterval(() => { if(ROL === 'cliente'){ renderAhora(); renderMiPareja(); renderGrilla(); } }, 60000);
+    relojTimer = setInterval(() => { if(ROL === 'cliente'){ renderAhora(); renderMiPareja(); renderLlave(); renderGrilla(); } }, 60000);
     return;
   }
 
