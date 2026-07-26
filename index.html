@@ -105,12 +105,12 @@ section{margin:24px 0;}
 .lv-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;font-size:13px;line-height:1.15;min-height:16px;}
 .lv-row + .lv-row{border-top:1px solid var(--linea);}
 .lv-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.lv-win{font-weight:700;}
+.lv-win .lv-nm{font-weight:700;}
 .lv-lose .lv-nm{color:var(--tinta-suave);}
 .lv-pend .lv-nm{color:var(--tinta-suave);font-style:italic;font-size:12px;}
 .lv-scs{display:flex;gap:5px;flex:0 0 auto;}
 .lv-sc{font-family:var(--mono);font-size:12px;min-width:11px;text-align:center;color:var(--tinta-suave);}
-.lv-win .lv-sc{color:var(--red);font-weight:700;}
+.lv-sc-win{color:var(--red);font-weight:700;}
 .lv-tag{font-family:var(--mono);font-size:8px;letter-spacing:.1em;color:#fff;background:var(--tinta-suave);padding:1px 6px;flex:0 0 auto;}
 .lv-byebox{background:var(--pared-2);}
 .lv-champ{display:flex;align-items:center;gap:9px;background:var(--red);color:#fff;padding:11px 12px;font-weight:700;font-size:14px;}
@@ -118,6 +118,15 @@ section{margin:24px 0;}
 .lv-champ.lv-pend .lv-nm{color:#fff;font-style:normal;font-size:14px;}
 .lv-champ-ico{font-size:17px;flex:0 0 auto;}
 .lv-champ.lv-pend{background:var(--pista);}
+body[data-rol="cliente"] #fasesFinales{display:none;}
+body[data-rol="cliente"][data-tab="fin"] #fasesFinales{display:block;}
+body[data-rol="cliente"][data-tab="fin"] #ahora,
+body[data-rol="cliente"][data-tab="fin"] #fixture,
+body[data-rol="cliente"][data-tab="fin"] #grilla,
+body[data-rol="cliente"][data-tab="fin"] #reglas{display:none;}
+.ff-cat{margin:0 0 24px;}
+.ff-cat-head{display:flex;align-items:center;gap:9px;font-family:var(--display);font-size:19px;font-weight:700;text-transform:uppercase;letter-spacing:.01em;color:var(--tinta);margin:0 0 10px;}
+.ff-dot{width:11px;height:11px;background:var(--cc,var(--red));flex:0 0 auto;}
 .card-head{background:var(--pista);color:#fff;padding:7px 11px 6px;display:flex;align-items:baseline;justify-content:space-between;gap:8px;}
 .card-head h3{font-size:17px;font-weight:600;}
 .card-head .tagm{font-family:var(--mono);font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:#9aa1a8;text-align:right;}
@@ -520,9 +529,9 @@ body[data-rol="cliente"] .vs .n{display:none;}
     <div id="miPanel"></div>
   </section>
 
-  <section id="llaveSec" class="cli-only">
-    <div class="sec-head"><span class="n">🏆</span><h2>Llave</h2><span class="rule"></span></div>
-    <div id="llavePanel"></div>
+  <section id="fasesFinales" class="cli-only">
+    <div class="sec-head"><span class="n">🏆</span><h2>Fases finales</h2><span class="rule"></span></div>
+    <div id="fasesPanel"></div>
   </section>
 
   <!-- ===================== ORGANIZADOR ===================== -->
@@ -591,7 +600,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v1.7 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v1.8 · Julio 2026</p>
   </div>
 </footer>
 
@@ -794,7 +803,7 @@ function nubeSuscribir(slug){
             const row = payload && payload.new;
             if(row && row.estado){
               S = expandir(row.estado);
-              render(); renderAhora(); renderMiPareja(); renderLlave(); renderGrilla();
+              render(); renderAhora(); renderMiPareja(); renderFasesFinales(); renderGrilla();
               const b = document.getElementById('envivo');
               if(b){ b.classList.add('pulse'); setTimeout(()=>b.classList.remove('pulse'), 900); }
             }
@@ -1329,7 +1338,7 @@ function renderTabs(){
   if(esOrg){
     if(catActiva !== '__cfg__' && !ids.includes(catActiva)) catActiva = '__cfg__';
   } else {
-    if(!ids.includes(catActiva)) catActiva = ids.length ? ids[0] : null;
+    if(catActiva !== '__fin__' && !ids.includes(catActiva)) catActiva = ids.length ? ids[0] : null;
   }
   let html = '';
   if(esOrg){
@@ -1339,8 +1348,11 @@ function renderTabs(){
     const n = partidosDe(c).length;
     return `<button class="tab${n ? '' : ' void'}" role="tab" data-cat="${c.id}" style="--cc:${colorCat(c)}" aria-selected="${c.id === catActiva}"><span class="dot"></span>${esc(c.nom)}<i>${n}</i></button>`;
   }).join('');
+  if(!esOrg && S.cats.length){
+    html += `<button class="tab tab-fin" role="tab" data-cat="__fin__" style="--cc:var(--red)" aria-selected="${catActiva === '__fin__'}"><span class="dot"></span>Fases finales</button>`;
+  }
   $('#tabs').innerHTML = html;
-  document.body.setAttribute('data-tab', (esOrg && catActiva === '__cfg__') ? 'cfg' : 'cat');
+  document.body.setAttribute('data-tab', (esOrg && catActiva === '__cfg__') ? 'cfg' : ((!esOrg && catActiva === '__fin__') ? 'fin' : 'cat'));
 }
 
 function inputSet(key, campo, ev, tb){
@@ -1429,6 +1441,7 @@ function renderCat(){
       <span class="tagm">${gr.p.length} parejas${ROL === 'org' ? ' · #'+pad(numGlobal(cat,gr.p[0]))+'–#'+pad(numGlobal(cat,gr.p[gr.p.length-1])) : ''}</span></div>
       <div class="card-body">${partidosGrupo(cat,gr).map(m => renderPartido(cat,m)).join('')}${renderTablaPos(cat,gr,a)}</div></div>`;
   }
+  if(ROL === 'org'){
   const llave = partidosLlave(cat);
   if(llave.length){
     html += `<div class="card"><div class="card-head"><h3>Fase final</h3><span class="tagm">desde ${esc(NOMBRE_FASE(a.S))}${a.byes > 0 ? ' · '+a.byes+' BYE' : ''}</span></div><div class="card-body">`;
@@ -1443,6 +1456,7 @@ function renderCat(){
   } else {
     html += `<div class="card"><div class="card-head"><h3>Fase final</h3><span class="tagm">sin armar</span></div>
       <div class="card-body"><p style="margin:0;color:var(--tinta-suave);font-size:14px">La fase final se arma cuando clasifican al menos 2 parejas y no más de las que juegan. Ajustá cupos o repechaje arriba.</p></div></div>`;
+  }
   }
   $('#catPanel').innerHTML = html;
 }
@@ -1816,19 +1830,11 @@ function renderMiPareja(){
 /* =====================================================================
    LLAVE (cuadro de eliminación, vista jugador)
    ===================================================================== */
-function renderLlave(){
-  const panel = document.getElementById('llavePanel');
-  const sec = document.getElementById('llaveSec');
-  if(!panel || !sec) return;
-  const cat = S.cats.find(c => c.id === catActiva);
-  const est = cat ? construirLlave(cat) : null;
-  if(!est){ sec.style.display = 'none'; panel.innerHTML = ''; return; }
-  sec.style.display = '';
-
+function bracketHTML(cat, est){
   const nombreLado = lado => {
     const idx = resolver(cat, lado);
     if(idx !== null && idx !== undefined) return {txt: nombrePareja(cat, idx), pend:false};
-    return {txt: textoLado(cat, lado) || '—', pend:true};
+    return {txt: textoLado(cat, lado) || '\u2014', pend:true};
   };
   const setsDe = m => {
     const r = S.res[m.key] || {}, sets = [];
@@ -1839,10 +1845,13 @@ function renderLlave(){
   };
   const filaLado = (info, sets, side, gan, hayRes) => {
     const cls = gan === true ? 'lv-win' : (gan === false && hayRes ? 'lv-lose' : '');
-    const scs = sets.map(s => `<span class="lv-sc">${esc(s[side])}</span>`).join('');
+    const scs = sets.map(s => {
+      const mine = +s[side], other = +s[1-side];
+      const gano = !isNaN(mine) && !isNaN(other) && mine > other;
+      return `<span class="lv-sc ${gano ? 'lv-sc-win' : ''}">${esc(s[side])}</span>`;
+    }).join('');
     return `<div class="lv-row ${cls} ${info.pend ? 'lv-pend' : ''}"><span class="lv-nm">${esc(info.txt)}</span><span class="lv-scs">${scs}</span></div>`;
   };
-
   let cols = '';
   est.rounds.forEach(rd => {
     let nodos = '';
@@ -1859,13 +1868,23 @@ function renderLlave(){
     });
     cols += `<div class="lv-col"><div class="lv-fase">${esc(rd.fase)}</div><div class="lv-nodos">${nodos}</div></div>`;
   });
-
   const finN = est.rounds[est.rounds.length-1].nodos.find(n => n.tipo === 'match');
   let campTxt = 'Se define en la final', campPend = true;
   if(finN){ const ev = evalPartido(cat, finN.m); if(ev.estado === 'ok' && ev.gid != null){ campTxt = nombrePareja(cat, ev.gid); campPend = false; } }
-  cols += `<div class="lv-col lv-col-camp"><div class="lv-fase">Campeón</div><div class="lv-nodos"><div class="lv-champ ${campPend ? 'lv-pend' : ''}"><span class="lv-champ-ico">🏆</span><span class="lv-nm">${esc(campTxt)}</span></div></div></div>`;
+  cols += `<div class="lv-col lv-col-camp"><div class="lv-fase">Campe\u00f3n</div><div class="lv-nodos"><div class="lv-champ ${campPend ? 'lv-pend' : ''}"><span class="lv-champ-ico">\ud83c\udfc6</span><span class="lv-nm">${esc(campTxt)}</span></div></div></div>`;
+  return `<div class="lv-scroll"><div class="lv-bracket">${cols}</div></div>`;
+}
 
-  panel.innerHTML = `<div class="lv-scroll"><div class="lv-bracket">${cols}</div></div>`;
+function renderFasesFinales(){
+  const panel = document.getElementById('fasesPanel');
+  if(!panel) return;
+  let html = '';
+  S.cats.forEach(cat => {
+    const est = construirLlave(cat);
+    if(!est) return;
+    html += `<div class="ff-cat"><div class="ff-cat-head" style="--cc:${colorCat(cat)}"><span class="ff-dot"></span>${esc(cat.nom)}</div>${bracketHTML(cat, est)}</div>`;
+  });
+  panel.innerHTML = html || `<p class="llave-vacia">Todav\u00eda no hay fases finales armadas.</p>`;
 }
 
 function aplicarRol(){
@@ -1897,7 +1916,7 @@ function render(){
   renderTabs(); renderCat();
   generarGrilla(); renderGrilla(); renderReglas(); renderProg();
   if(ROL === 'org'){ renderCfg(); renderDiag(); }
-  else { renderAhora(); renderMiPareja(); renderLlave(); }
+  else { renderAhora(); renderMiPareja(); renderFasesFinales(); }
   if(f){
     const el = document.querySelector('[data-fid="'+f.replace(/"/g,'')+'"]');
     if(el){ el.focus(); try{ el.setSelectionRange(ss,se); }catch(e){} }
@@ -2192,10 +2211,10 @@ function leerEmbed(){
     const ok = await nubeLeerCliente(slug);
     if(ok){
       ROL = 'cliente'; SOLO_JUGADOR = true; NUBE.slug = slug; NUBE.on = true;
-      render(); renderAhora(); renderMiPareja(); renderLlave(); renderGrilla();
+      render(); renderAhora(); renderMiPareja(); renderFasesFinales(); renderGrilla();
       badgeEnVivo(true);
       nubeSuscribir(slug);
-      relojTimer = setInterval(() => { if(ROL === 'cliente'){ renderAhora(); renderMiPareja(); renderLlave(); renderGrilla(); } }, 60000);
+      relojTimer = setInterval(() => { if(ROL === 'cliente'){ renderAhora(); renderMiPareja(); renderFasesFinales(); renderGrilla(); } }, 60000);
       return;
     }
     // el torneo no existe en la nube: seguimos abajo
@@ -2206,7 +2225,7 @@ function leerEmbed(){
   if(desde){
     S = desde; ROL = 'cliente'; SOLO_JUGADOR = true;
     render();
-    relojTimer = setInterval(() => { if(ROL === 'cliente'){ renderAhora(); renderMiPareja(); renderLlave(); renderGrilla(); } }, 60000);
+    relojTimer = setInterval(() => { if(ROL === 'cliente'){ renderAhora(); renderMiPareja(); renderFasesFinales(); renderGrilla(); } }, 60000);
     return;
   }
 
