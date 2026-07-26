@@ -69,6 +69,9 @@ input,select{font:inherit;}
 .prog{height:4px;background:rgba(255,255,255,.13);margin:6px 0 8px;position:relative;}
 .prog span{position:absolute;inset:0 auto 0 0;width:0;background:var(--red);transition:width .3s ease;}
 .tabs{display:flex;gap:5px;overflow-x:auto;scrollbar-width:thin;scrollbar-color:var(--red) rgba(255,255,255,.08);padding-bottom:5px;}
+.tabs-dias{margin-bottom:7px;padding-bottom:7px;border-bottom:1px solid rgba(255,255,255,.1);}
+body[data-rol="org"] #tabsDias{display:none;}
+body[data-rol="cliente"] #dayTabs{display:none;}
 .tabs::-webkit-scrollbar{height:6px;}
 .tabs::-webkit-scrollbar-track{background:rgba(255,255,255,.08);}
 .tabs::-webkit-scrollbar-thumb{background:var(--red);}
@@ -501,6 +504,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
   <div class="bar-inner">
     <div class="bar-head"><span id="barLbl">Resultados cargados</span><span><b id="pgTxt">0 / 0</b></span></div>
     <div class="prog"><span id="pgFill"></span></div>
+    <div class="tabs tabs-dias" id="tabsDias" role="tablist"></div>
     <div class="tabs" id="tabs" role="tablist"></div>
   </div>
 </nav>
@@ -631,7 +635,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v2.9 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v3.0 · Julio 2026</p>
   </div>
 </footer>
 
@@ -1365,28 +1369,38 @@ function renderDiag(){
 function renderTabs(){
   const esOrg = ROL === 'org';
   const ids = S.cats.map(c => c.id);
-  // pestaña activa: en organizador se permite la de Configuración ('__cfg__')
+  const esDia = v => /^__d\d+__$/.test(String(v));
+  // pestaña activa
   if(esOrg){
     if(catActiva !== '__cfg__' && catActiva !== '__fin__' && catActiva !== '__hor__' && !ids.includes(catActiva)) catActiva = '__cfg__';
   } else {
-    if(catActiva !== '__fin__' && catActiva !== '__hor__' && !ids.includes(catActiva)) catActiva = ids.length ? ids[0] : null;
+    if(!esDia(catActiva) && catActiva !== '__fin__' && !ids.includes(catActiva)) catActiva = ids.length ? ids[0] : null;
+    if(esDia(catActiva) && +catActiva.match(/\d+/)[0] >= S.dias.length) catActiva = ids.length ? ids[0] : null;
   }
-  let html = '';
+  const tabCat = c => { const n = partidosDe(c).length; return `<button class="tab${n ? '' : ' void'}" role="tab" data-cat="${c.id}" style="--cc:${colorCat(c)}" aria-selected="${c.id === catActiva}"><span class="dot"></span>${esc(c.nom)}<i>${n}</i></button>`; };
+
   if(esOrg){
-    html += `<button class="tab tab-cfg" role="tab" data-cat="__cfg__" style="--cc:var(--red)" aria-selected="${catActiva === '__cfg__'}"><span class="dot"></span>Configuración</button>`;
+    // barra única del organizador
+    let html = `<button class="tab tab-cfg" role="tab" data-cat="__cfg__" style="--cc:var(--red)" aria-selected="${catActiva === '__cfg__'}"><span class="dot"></span>Configuración</button>`;
+    if(S.cats.length) html += `<button class="tab tab-hor" role="tab" data-cat="__hor__" style="--cc:var(--red)" aria-selected="${catActiva === '__hor__'}"><span class="dot"></span>Horarios</button>`;
+    html += S.cats.map(tabCat).join('');
+    if(S.cats.length) html += `<button class="tab tab-fin" role="tab" data-cat="__fin__" style="--cc:var(--red)" aria-selected="${catActiva === '__fin__'}"><span class="dot"></span>Playoffs</button>`;
+    $('#tabs').innerHTML = html;
+    $('#tabsDias').innerHTML = '';
+  } else {
+    // jugador: fila 1 = días + Playoffs · fila 2 = categorías
+    let top = S.dias.map((d,i) => `<button class="tab tab-dia" role="tab" data-cat="__d${i}__" style="--cc:var(--red)" aria-selected="${catActiva === '__d'+i+'__'}"><span class="dot"></span>${esc(d.nom)}</button>`).join('');
+    if(S.cats.length) top += `<button class="tab tab-fin" role="tab" data-cat="__fin__" style="--cc:var(--red)" aria-selected="${catActiva === '__fin__'}"><span class="dot"></span>Playoffs</button>`;
+    $('#tabsDias').innerHTML = top;
+    $('#tabs').innerHTML = S.cats.map(tabCat).join('');
   }
-  if(S.cats.length){
-    html += `<button class="tab tab-hor" role="tab" data-cat="__hor__" style="--cc:var(--red)" aria-selected="${catActiva === '__hor__'}"><span class="dot"></span>Horarios</button>`;
-  }
-  html += S.cats.map(c => {
-    const n = partidosDe(c).length;
-    return `<button class="tab${n ? '' : ' void'}" role="tab" data-cat="${c.id}" style="--cc:${colorCat(c)}" aria-selected="${c.id === catActiva}"><span class="dot"></span>${esc(c.nom)}<i>${n}</i></button>`;
-  }).join('');
-  if(S.cats.length){
-    html += `<button class="tab tab-fin" role="tab" data-cat="__fin__" style="--cc:var(--red)" aria-selected="${catActiva === '__fin__'}"><span class="dot"></span>Playoffs</button>`;
-  }
-  $('#tabs').innerHTML = html;
-  document.body.setAttribute('data-tab', (esOrg && catActiva === '__cfg__') ? 'cfg' : (catActiva === '__fin__' ? 'fin' : (catActiva === '__hor__' ? 'hor' : 'cat')));
+
+  let tab = 'cat';
+  if(esOrg && catActiva === '__cfg__') tab = 'cfg';
+  else if(catActiva === '__fin__') tab = 'fin';
+  else if(catActiva === '__hor__') tab = 'hor';
+  else if(esDia(catActiva)){ tab = 'hor'; diaActivo = +catActiva.match(/\d+/)[0]; }
+  document.body.setAttribute('data-tab', tab);
 }
 
 function inputSet(key, campo, ev, tb){
