@@ -268,8 +268,8 @@ footer .note{font-size:13px;margin:0 0 9px;}
 footer .note b{color:#fff;}
 footer .sig{font-family:var(--mono);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:#5e666e;margin:13px 0 0;}
 .foot-social{display:flex;gap:14px;align-items:center;margin:14px 0 0;}
-.foot-social a{display:inline-flex;width:34px;height:34px;align-items:center;justify-content:center;transition:transform .12s ease, opacity .12s ease;}
-.foot-social a:hover{transform:translateY(-2px);}
+.foot-social a{display:inline-flex;width:34px;height:34px;align-items:center;justify-content:center;color:#9aa1a8;transition:transform .12s ease, color .12s ease;}
+.foot-social a:hover{transform:translateY(-2px);color:var(--red);}
 .foot-social svg{width:27px;height:27px;display:block;}
 
 @media (max-width:640px){
@@ -549,19 +549,19 @@ body[data-rol="cliente"] .vs .n{display:none;}
     </div>
     <div class="foot-social">
       <a href="https://www.instagram.com/cordonpadelclub/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" title="Instagram">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><defs><radialGradient id="igGrad" cx="0.3" cy="1.05" r="1.15"><stop offset="0" stop-color="#fed576"/><stop offset="0.25" stop-color="#f47133"/><stop offset="0.55" stop-color="#bc3081"/><stop offset="1" stop-color="#4c63d2"/></radialGradient></defs><rect x="2" y="2" width="20" height="20" rx="5.5" fill="url(#igGrad)"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="#fff" stroke-width="1.8"/><circle cx="17.2" cy="6.8" r="1.25" fill="#fff"/></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.6" y="2.6" width="18.8" height="18.8" rx="5" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="17.4" cy="6.6" r="1.3" fill="currentColor"/></svg>
       </a>
       <a href="https://youtube.com/@cordonpadel?si=gX-c3VGipNfYVeyq" target="_blank" rel="noopener noreferrer" aria-label="YouTube" title="YouTube">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1.5" y="5.2" width="21" height="13.6" rx="4" fill="#FF0000"/><path d="M10 8.6 L16 12 L10 15.4 Z" fill="#fff"/></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M23 12s0-3.4-.43-5.05a2.6 2.6 0 0 0-1.83-1.83C19.1 4.7 12 4.7 12 4.7s-7.1 0-8.74.42A2.6 2.6 0 0 0 1.43 6.95C1 8.6 1 12 1 12s0 3.4.43 5.05a2.6 2.6 0 0 0 1.83 1.83C4.9 19.3 12 19.3 12 19.3s7.1 0 8.74-.42a2.6 2.6 0 0 0 1.83-1.83C23 15.4 23 12 23 12zM9.75 15.02V8.98L15.5 12l-5.75 3.02z"/></svg>
       </a>
       <a href="https://tr.ee/n1OVlociwT" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" title="WhatsApp">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#25D366"/><path fill="#fff" d="M16.7 13.9c-.28-.14-1.65-.81-1.9-.9-.26-.09-.44-.14-.63.14-.18.28-.72.9-.88 1.08-.16.18-.32.2-.6.07-.28-.14-1.18-.43-2.24-1.38-.83-.74-1.39-1.65-1.55-1.93-.16-.28-.02-.43.12-.57.13-.13.28-.32.42-.49.14-.16.18-.28.28-.47.09-.18.05-.35-.02-.49-.07-.14-.63-1.51-.86-2.07-.23-.55-.46-.47-.63-.48-.16-.01-.35-.01-.53-.01-.18 0-.49.07-.74.35-.26.28-.97.95-.97 2.32 0 1.37 1 2.69 1.14 2.87.14.18 1.96 3 4.76 4.2.66.29 1.18.46 1.59.59.67.21 1.27.18 1.75.11.53-.08 1.65-.67 1.88-1.32.23-.65.23-1.2.16-1.32-.07-.12-.25-.18-.53-.32z"/></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347M20.52 3.449C12.831-3.984.106 1.407.101 11.893c0 2.096.549 4.142 1.595 5.945L0 24l6.335-1.652a11.9 11.9 0 005.71 1.454h.006c9.847 0 16.02-10.678 11.65-19.101a11.876 11.876 0 00-3.181-4.252M12.05 21.785h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-8.785 10.726-13.18 16.938-6.967 6.21 6.196 1.831 16.955-6.951 16.955"/></svg>
       </a>
       <a href="https://maps.app.goo.gl/4aKp2i6m83U2d5Vs5" target="_blank" rel="noopener noreferrer" aria-label="Ubicación" title="Cómo llegar">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#EA4335" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.6" fill="#fff"/></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v1.5 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v1.6 · Julio 2026</p>
   </div>
 </footer>
 
