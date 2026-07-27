@@ -556,6 +556,11 @@ body[data-rol="cliente"] .vs .n{display:none;}
             <button data-nubecopiar="1">Copiar enlace</button>
             <button data-nubeabrir="1">Probar vista jugador</button>
           </div>
+          <label class="nube-lbl" style="margin-top:10px">Enlace de organizador (para editar y sincronizar desde otro dispositivo)</label>
+          <textarea class="pub-link" id="nubeLinkOrg" readonly></textarea>
+          <div class="pub-btns">
+            <button data-copiarorg="1">Copiar enlace de organizador</button>
+          </div>
         </div>
         <p class="nube-estado" id="nubeEstado"></p>
       </div>
@@ -662,7 +667,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v3.6 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v3.7 · Julio 2026</p>
   </div>
 </footer>
 
@@ -804,7 +809,7 @@ const SB_KEY = 'sb_publishable_1pC3FRMX1CZtQKN3xHHniw_mVTMqpqC';
 let SB = null;
 try{ if(window.supabase && window.supabase.createClient) SB = window.supabase.createClient(SB_URL, SB_KEY); }catch(e){ SB = null; }
 
-const NUBE = { slug:'', on:false, canal:null };
+const NUBE = { slug:'', on:false, canal:null, dev:Math.random().toString(36).slice(2,10), pendiente:null };
 let syncTimer = null;
 
 function slugify(s){
@@ -812,7 +817,10 @@ function slugify(s){
     .toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40);
 }
 function linkNube(slug){ return location.href.split('#')[0].split('?')[0] + '?t=' + encodeURIComponent(slug); }
+function linkOrg(slug){ return location.href.split('#')[0].split('?')[0] + '?org=' + encodeURIComponent(slug); }
 function leerSlug(){ const m = (location.search||'').match(/[?&]t=([^&]+)/); return m ? decodeURIComponent(m[1]) : null; }
+function leerOrgSlug(){ const m = (location.search||'').match(/[?&]org=([^&]+)/); return m ? decodeURIComponent(m[1]) : null; }
+function editando(){ const a = document.activeElement; return !!(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT')); }
 function setEstadoNube(txt, err){
   const el = document.getElementById('nubeEstado');
   if(el){ el.textContent = txt; el.style.color = err ? 'var(--red)' : 'var(--tinta-suave)'; }
@@ -825,8 +833,9 @@ async function nubeGuardar(){
   if(!AUTH.user){ setEstadoNube('Iniciá sesión como organizador para guardar en la nube.', true); return; }
   setEstadoNube('Sincronizando…');
   try{
+    const estado = estadoPublicable(); estado._ed = NUBE.dev;
     const { error } = await SB.from('torneos').upsert({
-      slug: NUBE.slug, estado: estadoPublicable(), actualizado: new Date().toISOString()
+      slug: NUBE.slug, estado, actualizado: new Date().toISOString()
     });
     if(error) setEstadoNube('Error al sincronizar: ' + error.message, true);
     else setEstadoNube('Sincronizado ✓  ·  ' + new Date().toLocaleTimeString('es-UY',{hour:'2-digit',minute:'2-digit',second:'2-digit'}));
@@ -844,7 +853,9 @@ async function nubePublicar(){
   try{ localStorage.setItem('padel:slug', slug); }catch(e){}
   await nubeGuardar();
   const lk = document.getElementById('nubeLink'); if(lk) lk.value = linkNube(slug);
+  const lko = document.getElementById('nubeLinkOrg'); if(lko) lko.value = linkOrg(slug);
   const wrap = document.getElementById('nubeLinkWrap'); if(wrap) wrap.style.display = 'block';
+  if(!NUBE.canal) nubeSuscribirOrg(slug);
 }
 
 /* --- jugador: leer estado inicial y suscribirse a cambios en vivo --- */
@@ -876,7 +887,33 @@ function nubeSuscribir(slug){
   }catch(e){}
 }
 
-/* ============ AUTENTICACIÓN DE ORGANIZADOR ============ */
+/* --- organizador conectado: aplicar cambios entrantes de otros dispositivos --- */
+function aplicarNube(estado){
+  S = expandir(estado);
+  render(); renderAhora(); renderMiPareja(); renderFasesFinales(); renderGrilla();
+  const b = document.getElementById('envivo');
+  if(b){ b.classList.add('pulse'); setTimeout(() => b.classList.remove('pulse'), 900); }
+}
+function nubeSuscribirOrg(slug){
+  if(!SB) return;
+  try{
+    NUBE.canal = SB.channel('rt-org-' + slug)
+      .on('postgres_changes',
+          { event:'*', schema:'public', table:'torneos', filter:'slug=eq.' + slug },
+          payload => {
+            const row = payload && payload.new;
+            if(!row || !row.estado) return;
+            if(row.estado._ed === NUBE.dev) return;         // es nuestro propio eco
+            if(editando()){ NUBE.pendiente = row.estado; return; }  // no pisar lo que se está tipeando
+            aplicarNube(row.estado);
+          })
+      .subscribe();
+  }catch(e){}
+}
+/* si había un cambio entrante mientras editabas, aplicarlo al soltar el foco */
+document.addEventListener('focusout', () => {
+  setTimeout(() => { if(NUBE.pendiente && !editando()){ const e = NUBE.pendiente; NUBE.pendiente = null; aplicarNube(e); } }, 150);
+});
 const AUTH = { user: null };
 
 async function authInit(){
@@ -2323,7 +2360,7 @@ document.addEventListener('input', e => {
 });
 
 document.addEventListener('click', e => {
-  const b = e.target.closest('[data-act], [data-cat], [data-d], [data-mv], [data-drop], [data-unfix], [data-cancelmv], [data-clearfix], [data-modo], [data-verpub], [data-verorg], [data-pub], [data-copiar], [data-abrir], [data-cerrarpub], [data-descargar], [data-nubepub], [data-nubecopiar], [data-nubeabrir], [data-login], [data-logout], [data-impok], [data-impcancel], [data-aplicar], [data-elegirgrupo], [data-gridops], [data-elegirgrilla], [data-cerrargridops]');
+  const b = e.target.closest('[data-act], [data-cat], [data-d], [data-mv], [data-drop], [data-unfix], [data-cancelmv], [data-clearfix], [data-modo], [data-verpub], [data-verorg], [data-pub], [data-copiar], [data-abrir], [data-cerrarpub], [data-descargar], [data-nubepub], [data-nubecopiar], [data-nubeabrir], [data-login], [data-logout], [data-impok], [data-impcancel], [data-aplicar], [data-elegirgrupo], [data-gridops], [data-elegirgrilla], [data-cerrargridops], [data-copiarorg]');
   if(!b) return;
   const d = b.dataset;
   if(d.descargar){ descargarArchivo(b); return; }
@@ -2337,6 +2374,8 @@ document.addEventListener('click', e => {
   if(d.nubecopiar){ const t = $('#nubeLink'); t.select();
     navigator.clipboard ? navigator.clipboard.writeText(t.value).then(()=>flash(b,'¡Copiado!')) : (document.execCommand('copy'), flash(b,'¡Copiado!')); return; }
   if(d.nubeabrir){ window.open($('#nubeLink').value, '_blank'); return; }
+  if(d.copiarorg){ const t = $('#nubeLinkOrg'); t.select();
+    navigator.clipboard ? navigator.clipboard.writeText(t.value).then(()=>flash(b,'¡Copiado!')) : (document.execCommand('copy'), flash(b,'¡Copiado!')); return; }
   if(d.login){ authLogin(b); return; }
   if(d.logout){ authLogout(); return; }
   if(d.impok){ confirmarFormulario(); return; }
@@ -2696,6 +2735,7 @@ function togglePub(){
   if(ns && !ns.value) ns.value = NUBE.slug || slugify(S.torneo);
   if(NUBE.on && NUBE.slug){
     const lk = $('#nubeLink'); if(lk) lk.value = linkNube(NUBE.slug);
+    const lko = $('#nubeLinkOrg'); if(lko) lko.value = linkOrg(NUBE.slug);
     const wrap = $('#nubeLinkWrap'); if(wrap) wrap.style.display = 'block';
     if(SB) setEstadoNube('Tiempo real activo · etiqueta: ' + NUBE.slug);
   } else if(!SB){
@@ -2765,10 +2805,25 @@ setTimeout(finLoad, 6000);   // red de seguridad: nunca dejar el splash trabado
     return;
   }
 
-  // 3) ORGANIZADOR
+  // 3) ORGANIZADOR CONECTADO — enlace ?org=slug (edita y sincroniza entre dispositivos)
+  const orgSlug = leerOrgSlug();
+  if(orgSlug && SB){
+    ROL = 'org';
+    const ok = await nubeLeerCliente(orgSlug);   // carga el estado publicado
+    if(!ok){ await cargar(); }                    // si no existe aún en la nube, carga local
+    NUBE.slug = orgSlug; NUBE.on = true;
+    try{ localStorage.setItem('padel:slug', orgSlug); }catch(e){}
+    render();
+    authInit();
+    nubeSuscribirOrg(orgSlug);                    // recibe cambios de los otros dispositivos
+    finLoad();
+    return;
+  }
+
+  // 4) ORGANIZADOR (local, un solo dispositivo)
   await cargar(); ROL = 'org';
   // reconectar autosync si ya se publicó desde este dispositivo
-  try{ const rec = localStorage.getItem('padel:slug'); if(rec && SB){ NUBE.slug = rec; NUBE.on = true; } }catch(e){}
+  try{ const rec = localStorage.getItem('padel:slug'); if(rec && SB){ NUBE.slug = rec; NUBE.on = true; nubeSuscribirOrg(rec); } }catch(e){}
   render();
   authInit();
   finLoad();
