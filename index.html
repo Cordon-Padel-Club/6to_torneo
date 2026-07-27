@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Esqueleto de torneo — Pádel</title>
+<title>6to Torneo Cordón Pádel Club</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
@@ -100,6 +100,8 @@ section{margin:24px 0;}
 
 /* ---------- CARDS ---------- */
 .card{background:var(--pared);border:1px solid var(--linea);margin:0 0 11px;}
+.card.mi-grupo{outline:2px solid var(--red);outline-offset:-1px;}
+.mi-tag{font-family:var(--mono);font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:#fff;background:var(--red);padding:2px 6px;vertical-align:middle;margin-left:6px;}
 /* ---- Llave / cuadro de eliminación (vista jugador) ---- */
 .lv-scroll{overflow-x:auto;overflow-y:hidden;padding:2px 0 12px;-webkit-overflow-scrolling:touch;}
 .lv-bracket{display:flex;align-items:stretch;min-width:min-content;}
@@ -639,7 +641,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v3.1 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v3.2 · Julio 2026</p>
   </div>
 </footer>
 
@@ -692,7 +694,7 @@ function estadoVacio(){
 function estadoEjemplo(){
   const c = (n,p,f,G,pa,re) => { const x = catNueva(n,p,f); x.grupos = G; x.pasan = pa; x.repes = re; return x; };
   const est = {
-    torneo:'5to Torneo Cordón Padel',
+    torneo:'6to Torneo Cordón Pádel Club',
     fecha:'12 al 14 de setiembre · Cordón Padel Club',
     canchas:3,
     dias:[
@@ -1488,8 +1490,10 @@ function renderCat(){
     return;
   }
   let html = '';
+  const miIdx = (ROL === 'cliente' && miPareja && miPareja.split(':')[0] === cat.id) ? +miPareja.split(':')[1] : null;
   for(const gr of a.grs){
-    html += `<div class="card"><div class="card-head"><h3>Grupo ${gr.g}</h3>
+    const esMio = miIdx !== null && gr.p.includes(miIdx);
+    html += `<div class="card${esMio ? ' mi-grupo' : ''}"><div class="card-head"><h3>Grupo ${gr.g}${esMio ? ' <span class="mi-tag">Tu grupo</span>' : ''}</h3>
       <span class="tagm">${gr.p.length} parejas${ROL === 'org' ? ' · #'+pad(numGlobal(cat,gr.p[0]))+'–#'+pad(numGlobal(cat,gr.p[gr.p.length-1])) : ''}</span></div>
       <div class="card-body">${partidosGrupo(cat,gr).map(m => renderPartido(cat,m)).join('')}${renderTablaPos(cat,gr,a)}</div></div>`;
   }
@@ -2087,6 +2091,7 @@ function aplicarRol(){
   $('#rolTag').textContent = ROL === 'cliente' ? 'Vista jugador' : 'Vista organizador';
   $('#barLbl').textContent = ROL === 'cliente' ? 'Partidos jugados' : 'Resultados cargados';
   $('#tNomRo').textContent = S.torneo || 'Torneo de pádel';
+  document.title = S.torneo || '6to Torneo Cordón Pádel Club';
   $('#tFechaRo').textContent = S.fecha || '';
   $('#grillaTit').textContent = ROL === 'cliente' ? 'Horarios' : 'Grilla';
   // acciones de la barra de rol
