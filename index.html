@@ -121,6 +121,9 @@ section{margin:24px 0;}
 .lv-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;font-size:13px;line-height:1.15;min-height:16px;}
 .lv-row + .lv-row{border-top:1px solid var(--linea);}
 .lv-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.lv-sel{max-width:118px;font-family:var(--sans,inherit);font-size:11.5px;padding:2px 3px;border:1px solid var(--linea);background:#fff;color:var(--tinta);border-radius:2px;}
+.lv-sel.fijado{border-color:var(--red);color:var(--red-osc);font-weight:600;}
+.lv-win .lv-sel{font-weight:700;}
 .lv-win .lv-nm{font-weight:700;}
 .lv-lose .lv-nm{color:var(--tinta-suave);}
 .lv-pend .lv-nm{color:var(--tinta-suave);font-style:italic;font-size:12px;}
@@ -667,7 +670,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v3.7 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v3.8 · Julio 2026</p>
   </div>
 </footer>
 
@@ -765,7 +768,7 @@ async function guardar(){
   try{ localStorage.setItem('padel:esqueleto', JSON.stringify(S)); }catch(e){}
   nubeGuardarDebounced();
 }
-function normalizar(o){ o.fijos = o.fijos || {}; o.nom = o.nom || {}; o.disp = o.disp || {}; o.res = o.res || {}; o.modoGrilla = o.modoGrilla || 'auto'; o.cats = o.cats || []; o.dias = o.dias || []; o.fecha = o.fecha || ''; return o; }
+function normalizar(o){ o.fijos = o.fijos || {}; o.nom = o.nom || {}; o.disp = o.disp || {}; o.fijLlave = o.fijLlave || {}; o.res = o.res || {}; o.modoGrilla = o.modoGrilla || 'auto'; o.cats = o.cats || []; o.dias = o.dias || []; o.fecha = o.fecha || ''; return o; }
 async function cargar(){
   try{
     let raw = null;
@@ -780,11 +783,11 @@ async function cargar(){
 function estadoPublicable(){
   // sólo lo que el jugador necesita ver; sin flags de edición
   return {t:S.torneo, fx:S.fecha, cn:S.canchas, dd:S.dias, rr:S.reglas, mg:S.modoGrilla,
-          ct:S.cats, rs:S.res, nm:S.nom, dp:S.disp, fj:S.fijos};
+          ct:S.cats, rs:S.res, nm:S.nom, dp:S.disp, fj:S.fijos, fl:S.fijLlave};
 }
 function expandir(p){
   return normalizar({torneo:p.t, fecha:p.fx, canchas:p.cn, dias:p.dd, reglas:p.rr, modoGrilla:p.mg,
-          cats:p.ct, res:p.rs, nom:p.nm, disp:p.dp, fijos:p.fj});
+          cats:p.ct, res:p.rs, nom:p.nm, disp:p.dp, fijos:p.fj, fijLlave:p.fl});
 }
 function generarLink(){
   const json = JSON.stringify(estadoPublicable());
@@ -1088,9 +1091,12 @@ function seedsRepechaje(a){
   return seeds;
 }
 
+const _llaveCache = {};
 function construirLlave(cat){
   const a = analisisLlave(cat);
   if(!a.valida || a.Q < 2) return null;
+  const _sig = cat.id+'|'+a.pasan+'|'+a.repes+'|'+a.Q+'|'+a.S+'|'+a.grs.map(g=>g.g+':'+g.p.join('.')).join(';');
+  if(_llaveCache[_sig]) return _llaveCache[_sig];
   // sembrados por posición (todos los 1º, luego 2º, ...) + repechaje al final (peor sembrados)
   const seeds = [];
   for(let n = 1; n <= a.pasan; n++) a.grs.forEach(gr => seeds.push({t:'pos', g:gr.g, n}));
@@ -1102,18 +1108,34 @@ function construirLlave(cat){
   // slot k -> sembrado (order[k]) si existe, si no null = BYE
   const slot = order.map(sn => sn <= a.Q ? seeds[sn - 1] : null);
 
-  // anti-cruce de mismo grupo en la primera ronda jugada: intercambia lados B entre partidos reales
-  const reales = [];
-  for(let i = 0; i < S / 2; i++) if(slot[2*i] && slot[2*i+1]) reales.push([2*i, 2*i+1]);
-  for(let x = 0; x < reales.length; x++){
-    const [ai, bi] = reales[x];
-    if(grupoDe(slot[ai]) !== '*' && grupoDe(slot[ai]) === grupoDe(slot[bi])){
-      for(let y = 0; y < reales.length; y++){
-        if(y === x) continue;
-        const [ay, by] = reales[y];
-        if(grupoDe(slot[ai]) !== grupoDe(slot[by]) && grupoDe(slot[ay]) !== grupoDe(slot[bi])){
-          const t = slot[bi]; slot[bi] = slot[by]; slot[by] = t; break;
-        }
+  // Separación por grupos: dos parejas del mismo grupo deben cruzarse lo más tarde posible
+  // (idealmente la final). Los BYE quedan con los mejores sembrados (no se mueven); el resto
+  // se reacomoda con búsqueda local minimizando los cruces tempranos de mismo grupo.
+  const nR = Math.round(Math.log2(S));
+  const meetRound = (i, j) => { let r = 1; while((i >> r) !== (j >> r)) r++; return r; };
+  const esByeSlot = i => slot[i] && slot[i ^ 1] == null;
+  const libres = [];
+  for(let i = 0; i < S; i++) if(slot[i] && !esByeSlot(i)) libres.push(i);
+  const penal = () => {
+    let p = 0;
+    for(let i = 0; i < S; i++){
+      const gi = grupoDe(slot[i]); if(!slot[i] || gi === '*') continue;
+      for(let j = i + 1; j < S; j++){
+        if(slot[j] && grupoDe(slot[j]) === gi){ const mr = meetRound(i, j); if(mr < nR) p += Math.pow(2, nR - mr); }
+      }
+    }
+    return p;
+  };
+  let mejorPen = penal(), sigue = true, guard = 0;
+  while(sigue && guard++ < 400){
+    sigue = false;
+    for(let x = 0; x < libres.length && !sigue; x++){
+      for(let y = x + 1; y < libres.length; y++){
+        const i = libres[x], j = libres[y];
+        const t = slot[i]; slot[i] = slot[j]; slot[j] = t;
+        const np = penal();
+        if(np < mejorPen - 1e-9){ mejorPen = np; sigue = true; break; }
+        const u = slot[i]; slot[i] = slot[j]; slot[j] = u;   // revertir
       }
     }
   }
@@ -1137,7 +1159,9 @@ function construirLlave(cat){
     rounds.push({fase, size, nodos});
     feeders = next; ronda++;
   }
-  return {a, S, rounds};
+  const _res = {a, S, rounds};
+  _llaveCache[_sig] = _res;
+  return _res;
 }
 
 function partidosLlave(cat){
@@ -1197,8 +1221,15 @@ function analizar(r){
 let IX = {};   // cat.id -> índice de partidos
 function reindexar(){ IX = {}; S.cats.forEach(c => IX[c.id] = indice(c)); }
 
+function ladoLlave(cat, m, cual){
+  if((m.ronda||0) >= 80 && S.fijLlave){
+    const ov = S.fijLlave[cat.id+'-'+m.id+'-'+cual];
+    if(ov !== undefined && ov !== null && ov !== '') return +ov;
+  }
+  return resolver(cat, m[cual]);
+}
 function evalPartido(cat, m){
-  const A = resolver(cat, m.a), B = resolver(cat, m.b);
+  const A = ladoLlave(cat, m, 'a'), B = ladoLlave(cat, m, 'b');
   const ev = analizar(S.res[m.key] || {});
   ev.iA = A; ev.iB = B;
   if(ev.gan){ ev.gid = ev.gan === 'a' ? A : B; ev.pid = ev.gan === 'a' ? B : A; }
@@ -2159,14 +2190,27 @@ function bracketHTML(cat, est, u){
     });
     return sets;
   };
-  const filaLado = (info, sets, side, gan, hayRes) => {
+  const esOrg = ROL === 'org';
+  const selLado = (m, cual) => {
+    const key = cat.id+'-'+m.id+'-'+cual;
+    const ov = S.fijLlave && S.fijLlave[key];
+    const tieneOv = ov !== undefined && ov !== null && ov !== '';
+    const autoIdx = resolver(cat, m[cual]);
+    const autoTxt = autoIdx != null ? nombrePareja(cat, autoIdx) : (textoLado(cat, m[cual]) || 'a definir');
+    let opts = `<option value=""${tieneOv ? '' : ' selected'}>Auto · ${esc(autoTxt)}</option>`;
+    for(let i = 0; i < (cat.parejas||0); i++) opts += `<option value="${i}"${tieneOv && +ov === i ? ' selected' : ''}>${esc(nombrePareja(cat, i))}</option>`;
+    return `<select class="lv-sel${tieneOv ? ' fijado' : ''}" data-fijlado="${key}">${opts}</select>`;
+  };
+  const filaLado = (m, cual, idx, sets, side, gan, hayRes) => {
     const cls = gan === true ? 'lv-win' : (gan === false && hayRes ? 'lv-lose' : '');
     const scs = sets.map(s => {
       const mine = +s[side], other = +s[1-side];
       const gano = !isNaN(mine) && !isNaN(other) && mine > other;
       return `<span class="lv-sc ${gano ? 'lv-sc-win' : ''}">${esc(s[side])}</span>`;
     }).join('');
-    return `<div class="lv-row ${cls} ${info.pend ? 'lv-pend' : ''}"><span class="lv-nm">${esc(info.txt)}</span><span class="lv-scs">${scs}</span></div>`;
+    const pend = idx == null;
+    const cont = esOrg ? selLado(m, cual) : `<span class="lv-nm">${esc(idx != null ? nombrePareja(cat, idx) : (textoLado(cat, m[cual]) || '\u2014'))}</span>`;
+    return `<div class="lv-row ${cls} ${pend && !esOrg ? 'lv-pend' : ''}">${cont}<span class="lv-scs">${scs}</span></div>`;
   };
   let cols = '';
   est.rounds.forEach(rd => {
@@ -2179,10 +2223,9 @@ function bracketHTML(cat, est, u){
       }
       const m = nd.m, ev = evalPartido(cat, m), sets = setsDe(m);
       const hayRes = ev.estado === 'ok';
-      const A = nombreLado(m.a), B = nombreLado(m.b);
       const loc = u && u[m.key];
       const cuando = `<div class="lv-when">${loc ? esc(loc.dia)+' '+esc(loc.hora)+(loc.cancha ? ' · Cancha '+esc(loc.cancha) : '') : 'Horario a confirmar'}</div>`;
-      nodos += `<div class="lv-node">${filaLado(A, sets, 0, hayRes ? ev.gan === 'a' : null, hayRes)}${filaLado(B, sets, 1, hayRes ? ev.gan === 'b' : null, hayRes)}${cuando}</div>`;
+      nodos += `<div class="lv-node">${filaLado(m, 'a', ev.iA, sets, 0, hayRes ? ev.gan === 'a' : null, hayRes)}${filaLado(m, 'b', ev.iB, sets, 1, hayRes ? ev.gan === 'b' : null, hayRes)}${cuando}</div>`;
     });
     cols += `<div class="lv-col"><div class="lv-fase">${esc(rd.fase)}</div><div class="lv-nodos">${nodos}</div></div>`;
   });
@@ -2749,6 +2792,12 @@ document.addEventListener('change', e => {
   if(e.target && e.target.id === 'pickPareja'){
     miPareja = e.target.value || null;
     render();
+  }
+  if(e.target && e.target.dataset && e.target.dataset.fijlado !== undefined){
+    const key = e.target.dataset.fijlado, v = e.target.value;
+    S.fijLlave = S.fijLlave || {};
+    if(v === '') delete S.fijLlave[key]; else S.fijLlave[key] = +v;
+    guardar(); render();
   }
 });
 
