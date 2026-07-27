@@ -190,6 +190,10 @@ body[data-tab="hor"] #reglas{display:none;}
 .fi-mue{font-size:11px;color:var(--tinta-suave);margin-top:2px;}
 .fi-warn{font-size:11px;color:var(--tinta-suave);margin:10px 0;line-height:1.45;}
 .fi-err{color:var(--red);font-size:13px;margin:0;}
+.fi-op{border:1px solid var(--linea);padding:10px;margin:0 0 9px;background:var(--pared);}
+.fi-op-head{font-family:var(--display);font-size:15px;font-weight:700;margin-bottom:5px;}
+.fi-best{font-family:var(--mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:#fff;background:var(--red);padding:2px 6px;margin-left:6px;vertical-align:middle;}
+.fi-op button[data-elegirgrupo]{margin-top:8px;}
 .io.on{display:block;}
 
 /* ---------- VALIDADOR ---------- */
@@ -641,7 +645,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v3.2 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v3.3 · Julio 2026</p>
   </div>
 </footer>
 
@@ -2240,7 +2244,7 @@ document.addEventListener('input', e => {
 });
 
 document.addEventListener('click', e => {
-  const b = e.target.closest('[data-act], [data-cat], [data-d], [data-mv], [data-drop], [data-unfix], [data-cancelmv], [data-clearfix], [data-modo], [data-verpub], [data-verorg], [data-pub], [data-copiar], [data-abrir], [data-cerrarpub], [data-descargar], [data-nubepub], [data-nubecopiar], [data-nubeabrir], [data-login], [data-logout], [data-impok], [data-impcancel], [data-aplicar]');
+  const b = e.target.closest('[data-act], [data-cat], [data-d], [data-mv], [data-drop], [data-unfix], [data-cancelmv], [data-clearfix], [data-modo], [data-verpub], [data-verorg], [data-pub], [data-copiar], [data-abrir], [data-cerrarpub], [data-descargar], [data-nubepub], [data-nubecopiar], [data-nubeabrir], [data-login], [data-logout], [data-impok], [data-impcancel], [data-aplicar], [data-elegirgrupo]');
   if(!b) return;
   const d = b.dataset;
   if(d.descargar){ descargarArchivo(b); return; }
@@ -2257,7 +2261,12 @@ document.addEventListener('click', e => {
   if(d.login){ authLogin(b); return; }
   if(d.logout){ authLogout(); return; }
   if(d.impok){ confirmarFormulario(); return; }
-  if(d.impcancel){ importPend = null; const c = $('#formImport'); c.classList.remove('on'); c.innerHTML = ''; return; }
+  if(d.impcancel){ importPend = null; opsAgrupar = null; const c = $('#formImport'); c.classList.remove('on'); c.innerHTML = ''; return; }
+  if(d.elegirgrupo !== undefined){
+    const op = opsAgrupar && opsAgrupar[+d.elegirgrupo];
+    if(op){ aplicarPlanAgrupar(op); opsAgrupar = null; const c = $('#formImport'); c.classList.remove('on'); c.innerHTML = ''; guardar(); render(); toast('Grupos armados'); }
+    return;
+  }
   if(d.abrir){ window.open($('#pubLink').value, '_blank'); return; }
   if(d.cat){ catActiva = d.cat; render(); return; }
   if(d.d !== undefined){ diaActivo = +d.d; renderGrilla(); return; }
@@ -2417,20 +2426,26 @@ function previewFormulario(text){
 }
 
 /* ===== ETAPA 2: armar grupos por disponibilidad (prioriza grupos de 3) ===== */
-function agruparPorDisponibilidad(){
+function rngSeed(seed){ let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+function shuffleSeed(arr, rnd){ const a = arr.slice(); for(let i = a.length - 1; i > 0; i--){ const j = Math.floor(rnd() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+
+/* planifica un armado (sin tocar S); seed varía los desempates para generar alternativas */
+function planAgrupar(seed){
   const norm = t => String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
-  const rep = [];
+  const rnd = rngSeed(seed);
+  const catsPlan = [];
+  let limpios = 0, conflictos = 0, tres = 0;
   S.cats.forEach(cat => {
     const n = cat.parejas || 0;
-    if(n < 3){ rep.push({cat:cat.nom, grupos:[], sueltas:[], nota:'menos de 3 parejas: sin cambios'}); return; }
-    const pares = [];
+    if(n < 3){ catsPlan.push({catId:cat.id, catNom:cat.nom, nota:true, grupos:[], sueltas:[], G:cat.grupos}); return; }
+    let pares = [];
     for(let i = 0; i < n; i++){
       const d = S.disp[cat.id+':'+i];
       pares.push({i, nom:(S.nom[cat.id+':'+i] || 'Pareja '+(i+1)), set:(d && d.length) ? new Set(d.map(norm)) : null});
     }
+    pares = shuffleSeed(pares, rnd);
     const G = Math.max(1, Math.floor(n/3));
     const sizes = tamGrupos(n, G);
-    // formar primero los grupos más grandes (más difíciles de cerrar)
     const orden = sizes.map((s,gi) => ({s,gi})).sort((a,b) => b.s - a.s);
     const libres = pares.slice();
     const asignado = {};
@@ -2438,35 +2453,51 @@ function agruparPorDisponibilidad(){
       const cnt = {};
       libres.forEach(p => { if(p.set) p.set.forEach(b => cnt[b] = (cnt[b]||0)+1); });
       const wild = libres.filter(p => !p.set).length;
-      const cands = Object.keys(cnt).filter(b => cnt[b] + wild >= s).sort((a,b) => cnt[a] - cnt[b]);
+      let cands = Object.keys(cnt).filter(b => cnt[b] + wild >= s);
+      cands = shuffleSeed(cands, rnd).sort((a,b) => cnt[a] - cnt[b]);
       let elegidos = null, bloque = null;
       for(const b of cands){
         const esp = libres.filter(p => p.set && p.set.has(b)).sort((x,y) => x.set.size - y.set.size);
-        const pool = esp.concat(libres.filter(p => !p.set));
+        const pool = esp.concat(shuffleSeed(libres.filter(p => !p.set), rnd));
         if(pool.length >= s){ elegidos = pool.slice(0, s); bloque = b; break; }
       }
-      if(!elegidos && wild >= s){ elegidos = libres.filter(p => !p.set).slice(0, s); }
-      if(elegidos){
-        elegidos.forEach(p => libres.splice(libres.indexOf(p), 1));
-        asignado[gi] = {p:elegidos, bloque};
-      }
+      if(!elegidos && wild >= s) elegidos = libres.filter(p => !p.set).slice(0, s);
+      if(elegidos){ elegidos.forEach(p => libres.splice(libres.indexOf(p), 1)); asignado[gi] = {p:elegidos, bloque}; }
     }
-    // grupos que no cerraron: se llenan con las parejas restantes y quedan marcados
-    const sueltas = [];
+    sizes.forEach((s,gi) => { if(!asignado[gi]){ asignado[gi] = {p:libres.splice(0, s), bloque:null, forzado:true}; } });
+    sizes.forEach((s,gi) => { while(asignado[gi].p.length < s && libres.length){ asignado[gi].p.push(libres.shift()); asignado[gi].forzado = true; } });
+    const grupos = [], sueltas = [];
     sizes.forEach((s,gi) => {
-      if(asignado[gi]) return;
-      const p = libres.splice(0, s);
-      asignado[gi] = {p, bloque:null, forzado:true};
-      p.forEach(x => sueltas.push(x.nom));
+      const a = asignado[gi];
+      if(a.forzado){ conflictos += a.p.length; a.p.forEach(x => sueltas.push(x.nom)); }
+      else { limpios++; if(s === 3) tres++; }
+      grupos.push({p:a.p.map(x => x.i), bloque:a.bloque, forzado:!!a.forzado, n:s});
     });
-    sizes.forEach((s,gi) => {
-      while(asignado[gi].p.length < s && libres.length){
-        const x = libres.shift(); asignado[gi].p.push(x); asignado[gi].forzado = true; sueltas.push(x.nom);
-      }
-    });
-    // reordenar parejas: remapear nombres y disponibilidad al nuevo orden
+    catsPlan.push({catId:cat.id, catNom:cat.nom, grupos, sueltas, G});
+  });
+  const score = -conflictos * 1000 + tres * 10 + limpios;
+  return {cats:catsPlan, limpios, conflictos, tres, score};
+}
+
+/* genera hasta 3 opciones distintas, las mejores por puntaje */
+function opcionesAgrupar(){
+  const vistos = {}, planes = [];
+  for(let k = 1; k <= 60 && planes.length < 40; k++){
+    const p = planAgrupar((k * 2654435761) >>> 0);
+    const sig = p.cats.map(c => c.grupos.map(g => g.p.slice().sort((a,b) => a-b).join('.')).sort().join('|')).join('#');
+    if(vistos[sig]) continue; vistos[sig] = 1; planes.push(p);
+  }
+  planes.sort((a,b) => b.score - a.score);
+  return planes.slice(0, 3);
+}
+
+/* aplica un plan a S (reordena parejas, fija grupos, limpia resultados de esas categorías) */
+function aplicarPlanAgrupar(plan){
+  plan.cats.forEach(cp => {
+    if(cp.nota) return;
+    const cat = S.cats.find(c => c.id === cp.catId); if(!cat) return;
     const ordenFinal = [];
-    sizes.forEach((s,gi) => asignado[gi].p.forEach(p => ordenFinal.push(p.i)));
+    cp.grupos.forEach(g => g.p.forEach(oldI => ordenFinal.push(oldI)));
     const nn = {}, nd = {};
     ordenFinal.forEach((oldI, newI) => {
       const ko = cat.id+':'+oldI, kn = cat.id+':'+newI;
@@ -2476,29 +2507,35 @@ function agruparPorDisponibilidad(){
     Object.keys(S.nom).forEach(k => { if(k.startsWith(cat.id+':')) delete S.nom[k]; });
     Object.keys(S.disp).forEach(k => { if(k.startsWith(cat.id+':')) delete S.disp[k]; });
     Object.assign(S.nom, nn); Object.assign(S.disp, nd);
-    // resultados y fijos de esta categoría quedan obsoletos con el nuevo orden
     Object.keys(S.res).forEach(k => { if(k.startsWith(cat.id+'-')) delete S.res[k]; });
     Object.keys(S.fijos).forEach(k => { if(k.startsWith(cat.id+'-')) delete S.fijos[k]; });
-    cat.grupos = G;
-    rep.push({cat:cat.nom, grupos:sizes.map((s,gi) => ({letra:LETRAS[gi], n:s, bloque:asignado[gi].bloque, forzado:!!asignado[gi].forzado})), sueltas});
+    cat.grupos = cp.G;
   });
-  return rep;
 }
 
-function mostrarInformeAgrupado(rep){
+let opsAgrupar = null;
+function mostrarOpcionesAgrupar(ops){
   const cont = $('#formImport');
-  let html = `<div class="fi-head">Grupos armados por disponibilidad</div>`;
-  rep.forEach(r => {
-    html += `<div class="fi-cat"><b>${esc(r.cat)}</b>`;
-    if(r.nota){ html += ` — ${esc(r.nota)}</div>`; return; }
-    html += `<div class="fi-mue">${r.grupos.map(g => g.letra+'('+g.n+')'+(g.bloque ? ' · '+esc(g.bloque) : (g.forzado ? ' · ⚠ sin bloque común' : ' · libre')).toString()).join('  ·  ')}</div>`;
-    if(r.sueltas.length) html += `<div class="fi-mue" style="color:var(--red)">⚠ Para contactar (no comparten bloque con nadie): ${r.sueltas.map(esc).join(' · ')}</div>`;
-    html += `</div>`;
+  if(!ops || !ops.length){ cont.innerHTML = `<p class="fi-err">No pude armar opciones (¿hay disponibilidad cargada?).</p>`; cont.classList.add('on'); return; }
+  opsAgrupar = ops;
+  const empatan = ops.length > 1 && ops.every(o => o.score === ops[0].score);
+  let html = `<div class="fi-head">Elegí un armado de grupos · ${ops.length} opciones</div>`;
+  if(empatan && ops[0].conflictos > 0) html += `<p class="fi-mue" style="margin:-4px 0 8px">Dan la misma cantidad de conflictos, pero con parejas distintas: elegí según a quién preferís contactar.</p>`;
+  ops.forEach((op, i) => {
+    const confCats = op.cats.filter(c => c.sueltas && c.sueltas.length);
+    const mejor = i === 0 && !empatan;
+    html += `<div class="fi-op">
+      <div class="fi-op-head"><b>Opción ${i+1}</b>${mejor ? ' <span class="fi-best">mejor puntaje</span>' : ''}</div>
+      <div class="fi-mue">${op.limpios} grupos con bloque común · ${op.tres} de 3 · <b style="color:${op.conflictos ? 'var(--red)' : 'inherit'}">${op.conflictos} parejas a contactar</b></div>
+      ${confCats.length ? confCats.map(c => `<div class="fi-mue" style="color:var(--red)">${esc(c.catNom)}: ${c.sueltas.map(esc).join(' · ')}</div>`).join('') : '<div class="fi-mue">Sin conflictos \u2713</div>'}
+      <button data-elegirgrupo="${i}" class="pub-main">Usar la opción ${i+1}</button>
+    </div>`;
   });
-  html += `<p class="fi-warn">Las parejas se reordenaron para que cada grupo comparta un bloque horario. Los grupos marcados con ⚠ no cierran solos: en la grilla en modo Formulario van a quedar en la bandeja, y sus parejas están listadas arriba para que las contactes. Los resultados de las categorías reagrupadas se reiniciaron.</p>
-    <div class="pub-btns"><button data-impcancel="1">Cerrar</button></div>`;
+  html += `<p class="fi-warn">Al elegir, las parejas se reordenan para que cada grupo comparta un bloque. Los grupos con parejas a contactar quedan en la bandeja en modo Formulario. Se reinician los resultados de las categorías reagrupadas.</p>
+    <div class="pub-btns"><button data-impcancel="1">Cancelar</button></div>`;
   cont.innerHTML = html; cont.classList.add('on');
 }
+
 
 function confirmarFormulario(){
   if(!importPend) return;
@@ -2520,10 +2557,7 @@ function confirmarFormulario(){
 $('#btnForm').onclick = () => $('#fileForm').click();
 $('#btnAgrupar').onclick = () => {
   if(!S.disp || !Object.keys(S.disp).length){ alert('Primero importá el formulario (CSV): la disponibilidad de las parejas sale de ahí.'); return; }
-  if(!confirm('Se reordenan las parejas de cada categoría para que cada grupo comparta un bloque horario (priorizando grupos de 3). Los resultados ya cargados de esas categorías se reinician. ¿Seguimos?')) return;
-  const rep = agruparPorDisponibilidad();
-  guardar(); render();
-  mostrarInformeAgrupado(rep);
+  mostrarOpcionesAgrupar(opcionesAgrupar());
 };
 $('#fileForm').onchange = (e) => {
   const f = e.target.files && e.target.files[0]; if(!f) return;
