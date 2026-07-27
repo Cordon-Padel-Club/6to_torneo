@@ -68,7 +68,7 @@ input,select{font:inherit;}
 .bar-head b{color:#fff;}
 .prog{height:4px;background:rgba(255,255,255,.13);margin:6px 0 8px;position:relative;}
 .prog span{position:absolute;inset:0 auto 0 0;width:0;background:var(--red);transition:width .3s ease;}
-.tabs{display:flex;gap:5px;overflow-x:auto;scrollbar-width:thin;scrollbar-color:var(--red) rgba(255,255,255,.08);padding-bottom:5px;}
+.tabs{display:flex;gap:5px;overflow-x:scroll;scrollbar-width:thin;scrollbar-color:var(--red) rgba(255,255,255,.08);padding-bottom:5px;}
 .tabs-dias{margin-bottom:7px;padding-bottom:7px;border-bottom:1px solid rgba(255,255,255,.1);}
 body[data-rol="org"] #tabsDias{display:none;}
 body[data-rol="cliente"] #dayTabs{display:none;}
@@ -241,7 +241,7 @@ details.diag-wrap:not([open])>summary .cnt:after{content:" ▼";}
 .match-err{font-family:var(--mono);font-size:10px;letter-spacing:.05em;color:var(--red);padding:4px 9px 6px;border-top:1px solid var(--linea-suave);}
 
 /* ---------- POSICIONES ---------- */
-table.pos{width:100%;border-collapse:collapse;font-size:13.5px;margin:2px 0 0;}
+table.pos{width:100%;border-collapse:collapse;font-size:13.5px;margin:2px 0 0;background:#eaebed;}
 table.pos th{background:var(--pista);color:#fff;font-family:var(--mono);font-weight:400;font-size:8.5px;letter-spacing:.13em;text-transform:uppercase;padding:5px 6px;text-align:left;}
 table.pos th.n,table.pos td.n{text-align:right;width:36px;}
 table.pos td{padding:6px;border-bottom:1px solid var(--linea-suave);}
@@ -483,7 +483,8 @@ body[data-rol="cliente"] .vs .n{display:none;}
 .wg{color:var(--tinta-suave);font-weight:700;}
 </style>
 </head>
-<body data-rol="org" data-tab="cfg">
+<body data-tab="cfg">
+<script>try{document.body.setAttribute('data-rol',(/[?&]t=/.test(location.search)||location.hash.indexOf('#data=')===0)?'cliente':'org');}catch(e){document.body.setAttribute('data-rol','org');}</script>
 
 <div class="rolbar" id="rolbar">
   <div class="rolbar-in">
@@ -517,8 +518,6 @@ body[data-rol="cliente"] .vs .n{display:none;}
 
 <nav class="bar">
   <div class="bar-inner">
-    <div class="bar-head"><span id="barLbl">Resultados cargados</span><span><b id="pgTxt">0 / 0</b></span></div>
-    <div class="prog"><span id="pgFill"></span></div>
     <div class="tabs tabs-dias" id="tabsDias" role="tablist"></div>
     <div class="tabs" id="tabs" role="tablist"></div>
   </div>
@@ -650,7 +649,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v3.4 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v3.5 · Julio 2026</p>
   </div>
 </footer>
 
@@ -1913,10 +1912,8 @@ function renderReglas(){
 }
 
 function renderProg(){
-  let ok = 0, tot = 0;
-  S.cats.forEach(c => partidosDe(c).forEach(m => { tot++; if(evalPartido(c,m).estado === 'ok') ok++; }));
-  $('#pgTxt').textContent = ok+' / '+tot;
-  $('#pgFill').style.width = (tot ? ok/tot*100 : 0)+'%';
+  let tot = 0;
+  S.cats.forEach(c => partidosDe(c).forEach(m => { tot++; }));
   $('#stPart').innerHTML = '<b>'+tot+'</b><span>partidos</span>';
   $('#stPar').innerHTML = '<b>'+S.cats.reduce((s,c) => s+(c.parejas||0),0)+'</b><span>parejas</span>';
   $('#stCat').innerHTML = '<b>'+S.cats.filter(c => c.parejas > 1).length+'</b><span>categorías</span>';
@@ -2163,7 +2160,6 @@ function aplicarRol(){
   document.body.setAttribute('data-rol', ROL);
   document.body.setAttribute('data-solo', SOLO_JUGADOR ? '1' : '0');
   $('#rolTag').textContent = ROL === 'cliente' ? 'Vista jugador' : 'Vista organizador';
-  $('#barLbl').textContent = ROL === 'cliente' ? 'Partidos jugados' : 'Resultados cargados';
   $('#tNomRo').textContent = S.torneo || 'Torneo de pádel';
   document.title = S.torneo || '6to Torneo Cordón Pádel Club';
   $('#tFechaRo').textContent = S.fecha || '';
@@ -2727,6 +2723,7 @@ function leerEmbed(){
 (async () => {
   const embebido = leerEmbed();
   const slug = leerSlug();
+  if(slug || embebido || leerLink()){ document.body.setAttribute('data-rol','cliente'); }
 
   // 1) JUGADOR EN VIVO — enlace ?t=slug (nube)
   if(slug && SB){
