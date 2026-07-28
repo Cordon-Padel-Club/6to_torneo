@@ -257,11 +257,11 @@ table.pos{width:100%;border-collapse:collapse;font-size:13.5px;margin:2px 0 0;ba
 table.pos th{background:var(--pista);color:#fff;font-family:var(--mono);font-weight:400;font-size:8.5px;letter-spacing:.13em;text-transform:uppercase;padding:5px 6px;text-align:left;}
 table.pos th.n,table.pos td.n{text-align:right;width:36px;}
 table.pos td{padding:6px;border-bottom:1px solid var(--linea-suave);}
-table.pos tr.q td{background:#fff;}
 table.pos tr.q td:first-child{box-shadow:inset 3px 0 0 var(--red);}
 table.pos tr.rep td:first-child{box-shadow:inset 3px 0 0 var(--linea);}
 table.pos td.n{font-family:var(--mono);}
 table.pos td .p{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--tinta-suave);}
+table.pos td .clas-tag{font-family:var(--mono);font-size:8px;letter-spacing:.11em;text-transform:uppercase;color:#fff;background:var(--red);padding:2px 6px;margin-left:8px;white-space:nowrap;vertical-align:middle;}
 .tie{font-family:var(--mono);font-size:10px;color:var(--red);margin:6px 0 0;line-height:1.5;}
 .tie.soft{color:var(--tinta-suave);}
 /* clasificados (vista jugador) */
@@ -705,7 +705,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v4.7 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v4.8 · Julio 2026</p>
   </div>
 </footer>
 
@@ -1578,8 +1578,9 @@ function renderTablaPos(cat, gr, a){
     const rep = tb.cerrada && a.repes > 0 && k === a.pasan;
     const acc = org ? `<span class="pos-btns"><button class="pbtn${movOn && parMov.i === f.i ? ' mv-on' : ''}" data-parmv="${f.i}" title="Intercambiar con otra pareja">⇄</button><button class="pbtn" data-pardel="${f.i}" title="Eliminar pareja del torneo">✕</button></span>` : '';
     const attrs = org ? ` draggable="true" data-pardrop="${f.i}"` : '';
+    const tag = q ? '<span class="clas-tag">Clasificado</span>' : '';
     return `<tr class="${q ? 'q' : (rep ? 'rep' : '')}${movOn ? ' drop-on' : ''}"${attrs}><td class="n">${k+1}º</td>
-      <td><span class="pos-nm">${esc(nombrePareja(cat,f.i))} <span class="p">#${pad(numGlobal(cat,f.i))}</span></span>${acc}</td>
+      <td><span class="pos-nm">${esc(nombrePareja(cat,f.i))} <span class="p">#${pad(numGlobal(cat,f.i))}</span></span>${tag}${acc}</td>
       <td class="n">${f.pj}</td><td class="n">${f.pg}</td><td class="n"><b>${f.pts}</b></td><td class="n">${sg(f.gf-f.gc)}</td></tr>`;
   }).join('');
   const notas = [];
