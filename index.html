@@ -317,6 +317,10 @@ table.pos td .p{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:
 .ptagsel{font-family:var(--mono);font-size:9px;letter-spacing:.06em;border:1px solid var(--linea);background:#fff;color:var(--tinta-suave);padding:3px 7px;cursor:pointer;}
 .ptagsel.on{background:var(--pista);border-color:var(--pista);color:#fff;}
 .padd{margin-top:9px;border:1px dashed var(--pista);background:#fff;color:var(--tinta);font-size:13px;padding:6px 12px;cursor:pointer;}
+.pos-btns{display:inline-flex;gap:3px;margin-left:7px;vertical-align:middle;}
+tr[data-pardrop]{cursor:grab;}
+tr.drop-on td{background:#fbe3e3;}
+td .pos-nm{vertical-align:middle;}
 
 .modo-hint{font-size:12px;color:var(--tinta-suave);flex:1;min-width:180px;}
 /* bandeja */
@@ -694,7 +698,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v4.1 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v4.2 · Julio 2026</p>
   </div>
 </footer>
 
@@ -1559,11 +1563,15 @@ function renderPartido(cat, m){
 function renderTablaPos(cat, gr, a){
   const tb = tabla(cat, gr);
   const sg = n => (n > 0 ? '+' : '')+n;
+  const org = ROL === 'org';
+  const movOn = org && parMov && parMov.catId === cat.id;
   const filas = tb.filas.map((f,k) => {
     const q = tb.cerrada && k < a.pasan;
     const rep = tb.cerrada && a.repes > 0 && k === a.pasan;
-    return `<tr class="${q ? 'q' : (rep ? 'rep' : '')}"><td class="n">${k+1}º</td>
-      <td>${esc(nombrePareja(cat,f.i))} <span class="p">#${pad(numGlobal(cat,f.i))}</span></td>
+    const acc = org ? `<span class="pos-btns"><button class="pbtn" data-parmv="${f.i}" title="Intercambiar con otra pareja">⇄</button><button class="pbtn" data-pardel="${f.i}" title="Eliminar pareja del torneo">✕</button></span>` : '';
+    const attrs = org ? ` draggable="true" data-pardrop="${f.i}"` : '';
+    return `<tr class="${q ? 'q' : (rep ? 'rep' : '')}${movOn ? ' drop-on' : ''}"${attrs}><td class="n">${k+1}º</td>
+      <td><span class="pos-nm">${esc(nombrePareja(cat,f.i))} <span class="p">#${pad(numGlobal(cat,f.i))}</span></span>${acc}</td>
       <td class="n">${f.pj}</td><td class="n">${f.pg}</td><td class="n"><b>${f.pts}</b></td><td class="n">${sg(f.gf-f.gc)}</td></tr>`;
   }).join('');
   const notas = [];
@@ -1662,8 +1670,8 @@ function renderPanelParejas(cat, a){
       <div class="pub-btns"><button class="pub-main" data-parsave="1">${ed.idx == null ? 'Agregar' : 'Guardar'}</button><button data-parcancel="1">Cancelar</button></div></div>`;
   }
   const hint = parMov && parMov.catId === cat.id
-    ? 'Elegí la otra pareja para intercambiarlas.'
-    : 'Arrastrá una pareja sobre otra para intercambiarlas de grupo (o tocá ⇄ y después la otra). Los grupos tienen tamaño fijo, así que el cambio de grupo es por intercambio.';
+    ? 'Elegí la otra pareja (ficha o fila de tabla) para intercambiarlas.'
+    : 'Arrastrá una pareja sobre otra (acá o sobre su fila en la tabla del grupo) para intercambiarlas, o tocá ⇄ y elegí a la otra. Los grupos tienen tamaño fijo: el cambio de grupo es por intercambio.';
   return `<div class="card"><div class="card-head"><h3>Parejas anotadas</h3><span class="tagm">${cat.parejas} parejas</span></div>
     <div class="card-body"><div class="phint">${hint}</div><div class="pgrupos">${grupos}</div>${editor}${ed ? '' : '<button class="padd" data-paradd="1">+ Agregar pareja</button>'}</div></div>`;
 }
@@ -2515,7 +2523,7 @@ document.addEventListener('input', e => {
 });
 
 document.addEventListener('click', e => {
-  const b = e.target.closest('[data-act], [data-cat], [data-d], [data-mv], [data-drop], [data-unfix], [data-cancelmv], [data-clearfix], [data-modo], [data-verpub], [data-verorg], [data-pub], [data-copiar], [data-abrir], [data-cerrarpub], [data-descargar], [data-nubepub], [data-nubecopiar], [data-nubeabrir], [data-login], [data-logout], [data-impok], [data-impcancel], [data-aplicar], [data-elegirgrupo], [data-gridops], [data-elegirgrilla], [data-cerrargridops], [data-copiarorg], [data-parchip], [data-parmv], [data-pardel], [data-paredit], [data-paradd], [data-parsave], [data-parcancel], [data-partag]');
+  const b = e.target.closest('[data-act], [data-cat], [data-d], [data-mv], [data-drop], [data-unfix], [data-cancelmv], [data-clearfix], [data-modo], [data-verpub], [data-verorg], [data-pub], [data-copiar], [data-abrir], [data-cerrarpub], [data-descargar], [data-nubepub], [data-nubecopiar], [data-nubeabrir], [data-login], [data-logout], [data-impok], [data-impcancel], [data-aplicar], [data-elegirgrupo], [data-gridops], [data-elegirgrilla], [data-cerrargridops], [data-copiarorg], [data-parchip], [data-pardrop], [data-parmv], [data-pardel], [data-paredit], [data-paradd], [data-parsave], [data-parcancel], [data-partag]');
   if(!b) return;
   const d = b.dataset;
   if(d.descargar){ descargarArchivo(b); return; }
@@ -2560,10 +2568,11 @@ document.addEventListener('click', e => {
     if(!parEd || !parEd.nombre.trim()){ alert('Poné el nombre de la pareja.'); return; }
     guardarPareja(); return; }
   if(d.parcancel){ parEd = null; render(); return; }
-  if(d.parchip !== undefined){
+  if(d.parchip !== undefined || d.pardrop !== undefined){
     if(parMov && parMov.catId === catActiva){
+      const j = +(d.parchip !== undefined ? d.parchip : d.pardrop);
       const cat = S.cats.find(c => c.id === catActiva);
-      if(cat && swapParejas(cat, parMov.i, +d.parchip)){ parMov = null; guardar(); render(); }
+      if(cat && swapParejas(cat, parMov.i, j)){ parMov = null; guardar(); render(); }
       else { parMov = null; render(); }
     }
     return; }
@@ -2938,21 +2947,22 @@ document.addEventListener('change', e => {
 });
 
 /* Drag & drop de parejas entre grupos (intercambio) */
+const parTarget = el => el.closest && el.closest('[data-parchip], [data-pardrop]');
+const parIdx = c => +(c.dataset.parchip !== undefined ? c.dataset.parchip : c.dataset.pardrop);
 document.addEventListener('dragstart', e => {
-  const c = e.target.closest && e.target.closest('[data-parchip]');
-  if(c){ e.dataTransfer.setData('text/plain', 'par:' + c.dataset.parchip); e.dataTransfer.effectAllowed = 'move'; }
+  const c = parTarget(e.target);
+  if(c){ e.dataTransfer.setData('text/plain', 'par:' + parIdx(c)); e.dataTransfer.effectAllowed = 'move'; }
 });
 document.addEventListener('dragover', e => {
-  const c = e.target.closest && e.target.closest('[data-parchip]');
-  if(c) e.preventDefault();
+  if(parTarget(e.target)) e.preventDefault();
 });
 document.addEventListener('drop', e => {
-  const c = e.target.closest && e.target.closest('[data-parchip]');
+  const c = parTarget(e.target);
   if(!c) return;
   e.preventDefault();
   const dt = e.dataTransfer.getData('text/plain');
   if(!dt || dt.indexOf('par:') !== 0) return;
-  const i = +dt.slice(4), j = +c.dataset.parchip;
+  const i = +dt.slice(4), j = parIdx(c);
   const cat = S.cats.find(x => x.id === catActiva);
   if(cat && i !== j && swapParejas(cat, i, j)){ parMov = null; guardar(); render(); }
 });
