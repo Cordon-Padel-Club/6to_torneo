@@ -705,7 +705,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v4.5 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v4.7 · Julio 2026</p>
   </div>
 </footer>
 
@@ -2280,8 +2280,9 @@ function renderMiPareja(){
 
       html += `<div class="mine-card" style="--cc:${colorCat(cat)}">
         <div class="mch"><b>${esc(nombrePareja(cat,idx))}</b><span>${esc(cat.nom)}</span></div>
-        <div class="mine-next"><div class="big${prox ? '' : ' none'}">${prox ? 'Próximo: '+esc(prox.m.fase)+' '+esc(prox.m.id) : 'Sin próximo partido'}</div>
-          <div class="sm">${nextTxt}</div></div>
+        <div class="mine-next"><div class="big${prox ? '' : ' none'}">${prox
+          ? (prox.loc ? 'Próximo partido: '+esc(prox.loc.dia)+', '+esc(prox.loc.hora)+', Cancha '+esc(prox.loc.cancha) : 'Próximo partido: horario a confirmar')
+          : 'Sin próximo partido'}</div></div>
         <div class="mine-list">`;
       mios.forEach(x => {
         const rival = x.yo === 'a' ? ladoNombre(cat, x.m.b) : ladoNombre(cat, x.m.a);
@@ -2291,9 +2292,10 @@ function renderMiPareja(){
         const enJuego = x.loc && hoy !== null && x.loc.di === hoy && (() => { const ini = h2min(x.loc.hora); return min >= ini && min < ini + franjaLargo(hoy); })();
         const when = x.loc ? `${x.loc.dia.slice(0,3)} ${x.loc.hora} C${x.loc.cancha}` : 'sin horario';
         const res = jugado ? (gane ? 'Ganado' : 'Perdido') : (enJuego ? 'En juego' : '');
+        const faseTxt = x.m.gr ? 'Fase de Grupos' : x.m.fase;
         html += `<div class="mine-row${gane ? ' win' : ''}${enJuego ? ' now' : ''}">
           <span class="when">${esc(when)}</span>
-          <span>${esc(x.m.fase)} ${esc(x.m.id)} · vs ${esc(rival.txt)}</span>
+          <span>${esc(faseTxt)} · vs ${esc(rival.txt)}</span>
           <span class="res">${res}</span></div>`;
       });
       html += `</div></div>`;
