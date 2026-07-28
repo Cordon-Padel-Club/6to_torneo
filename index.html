@@ -69,6 +69,9 @@ input,select{font:inherit;}
 .prog{height:4px;background:rgba(255,255,255,.13);margin:6px 0 8px;position:relative;}
 .prog span{position:absolute;inset:0 auto 0 0;width:0;background:var(--red);transition:width .3s ease;}
 .tabs{display:flex;gap:5px;overflow-x:scroll;scrollbar-width:thin;scrollbar-color:var(--red) rgba(255,255,255,.08);padding-bottom:5px;}
+.tabs::-webkit-scrollbar{height:5px;display:block;-webkit-appearance:none;}
+.tabs::-webkit-scrollbar-track{background:rgba(255,255,255,.08);}
+.tabs::-webkit-scrollbar-thumb{background:var(--red);}
 #splash{position:fixed;inset:0;background:var(--pista);z-index:9999;display:flex;align-items:center;justify-content:center;transition:opacity .35s ease;}
 #splash.off{opacity:0;pointer-events:none;}
 .splash-in{text-align:center;}
@@ -294,6 +297,27 @@ table.pos td .p{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:
 .ops-box{background:#fff;max-width:460px;width:100%;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.35);}
 #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(12px);background:var(--tinta);color:#fff;font-family:var(--mono);font-size:12px;letter-spacing:.02em;padding:10px 16px;opacity:0;pointer-events:none;transition:opacity .2s ease, transform .2s ease;z-index:200;box-shadow:0 6px 24px rgba(0,0,0,.25);}
 #toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+.pgrupos{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:9px;}
+.pgrupo{border:1px solid var(--linea);background:#fff;padding:7px;}
+.pgrupo-h{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--tinta-suave);margin-bottom:6px;}
+.pchip{border:1px solid var(--linea);background:var(--pared);padding:5px 6px;margin:0 0 5px;cursor:grab;}
+.pchip.sel{outline:2px solid var(--red);outline-offset:-1px;}
+.pchip-top{display:flex;justify-content:space-between;gap:6px;align-items:center;}
+.pchip-nm{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pchip-btns{display:flex;gap:3px;flex:none;}
+.pbtn{border:1px solid var(--linea);background:#fff;font-size:11px;line-height:1;padding:2px 5px;cursor:pointer;color:var(--tinta-suave);}
+.pbtn:hover{border-color:var(--red);color:var(--red-osc);}
+.pchip-tags{margin-top:3px;display:flex;flex-wrap:wrap;gap:3px;}
+.ptag{font-family:var(--mono);font-size:8px;letter-spacing:.06em;background:var(--pista);color:#fff;padding:1px 4px;}
+.ptag-libre{background:#9aa1a8;}
+.phint{font-size:12px;color:var(--tinta-suave);margin:0 0 8px;}
+.pareja-ed{border:1px dashed var(--linea);padding:9px;margin-top:9px;background:#fff;}
+.pareja-ed input{width:100%;box-sizing:border-box;font-size:14px;padding:6px 8px;border:1px solid var(--linea);margin:4px 0 7px;}
+.ptagsels{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;}
+.ptagsel{font-family:var(--mono);font-size:9px;letter-spacing:.06em;border:1px solid var(--linea);background:#fff;color:var(--tinta-suave);padding:3px 7px;cursor:pointer;}
+.ptagsel.on{background:var(--pista);border-color:var(--pista);color:#fff;}
+.padd{margin-top:9px;border:1px dashed var(--pista);background:#fff;color:var(--tinta);font-size:13px;padding:6px 12px;cursor:pointer;}
+
 .modo-hint{font-size:12px;color:var(--tinta-suave);flex:1;min-width:180px;}
 /* bandeja */
 .tray{border:1px solid var(--linea);background:var(--pared-2);margin:0 0 12px;}
@@ -670,7 +694,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v3.9 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v4.1 · Julio 2026</p>
   </div>
 </footer>
 
@@ -1557,6 +1581,93 @@ function renderTablaPos(cat, gr, a){
     <tbody>${filas}</tbody></table>${clasif}${notas.join('')}`;
 }
 
+/* ===== PANEL DE PAREJAS (organizador): ver, intercambiar, editar, agregar, eliminar ===== */
+const BLOQUES_STD = ['JUEVES 17-20','JUEVES 20-23','VIERNES 17-20','VIERNES 20-23','SÁBADO 8-11','SÁBADO 11-14','SÁBADO 14-17','SÁBADO 17-20','SÁBADO 20-23'];
+let parMov = null, parEd = null;
+function abrevBloque(b){ const p = String(b).split(' '); return (p[0]||'').slice(0,3)+' '+(p[1]||''); }
+function hayResCat(cat){ return Object.keys(S.res).some(k => k.startsWith(cat.id+'-')); }
+function limpiarCat(cat, conFijos){
+  Object.keys(S.res).forEach(k => { if(k.startsWith(cat.id+'-')) delete S.res[k]; });
+  Object.keys(S.fijLlave||{}).forEach(k => { if(k.startsWith(cat.id+'-')) delete S.fijLlave[k]; });
+  if(conFijos) Object.keys(S.fijos||{}).forEach(k => { if(k.startsWith(cat.id+'-')) delete S.fijos[k]; });
+}
+function swapParejas(cat, i, j){
+  if(i === j) return false;
+  if(hayResCat(cat) && !confirm('Hay resultados cargados en esta categoría; al intercambiar parejas se reinician (los horarios quedan). ¿Seguimos?')) return false;
+  const ki = cat.id+':'+i, kj = cat.id+':'+j;
+  const tn = S.nom[ki]; const td = S.disp[ki];
+  if(S.nom[kj] != null) S.nom[ki] = S.nom[kj]; else delete S.nom[ki];
+  if(tn != null) S.nom[kj] = tn; else delete S.nom[kj];
+  if(S.disp[kj] != null) S.disp[ki] = S.disp[kj]; else delete S.disp[ki];
+  if(td != null) S.disp[kj] = td; else delete S.disp[kj];
+  limpiarCat(cat, false);
+  return true;
+}
+function eliminarPareja(cat, i){
+  const nom = S.nom[cat.id+':'+i] || ('Pareja '+(i+1));
+  if(!confirm('¿Eliminar a "'+nom+'" del torneo? El cuadro de la categoría se rearma y sus resultados y horarios se reinician.')) return;
+  for(let k = i; k < cat.parejas - 1; k++){
+    const ka = cat.id+':'+k, kb = cat.id+':'+(k+1);
+    if(S.nom[kb] != null) S.nom[ka] = S.nom[kb]; else delete S.nom[ka];
+    if(S.disp[kb] != null) S.disp[ka] = S.disp[kb]; else delete S.disp[ka];
+  }
+  delete S.nom[cat.id+':'+(cat.parejas-1)];
+  delete S.disp[cat.id+':'+(cat.parejas-1)];
+  cat.parejas--;
+  if(cat.grupos){ const t = tamGrupos(cat.parejas, cat.grupos); if(!t.length || Math.min(...t) < 2) cat.grupos = null; }
+  limpiarCat(cat, true);
+  parMov = null; parEd = null;
+  guardar(); render();
+}
+function guardarPareja(){
+  const cat = S.cats.find(c => c.id === parEd.catId); if(!cat){ parEd = null; render(); return; }
+  const nombre = parEd.nombre.trim();
+  if(parEd.idx == null){
+    if(hayResCat(cat) && !confirm('Hay resultados cargados; al agregar una pareja cambia el cuadro y se reinician (también los horarios de la categoría). ¿Seguimos?')){ return; }
+    const i = cat.parejas;
+    S.nom[cat.id+':'+i] = nombre;
+    if(parEd.disp.length) S.disp[cat.id+':'+i] = parEd.disp.slice();
+    cat.parejas++;
+    limpiarCat(cat, true);
+  } else {
+    const k = cat.id+':'+parEd.idx;
+    S.nom[k] = nombre;
+    if(parEd.disp.length) S.disp[k] = parEd.disp.slice(); else delete S.disp[k];
+  }
+  parEd = null;
+  guardar(); render();
+}
+function renderPanelParejas(cat, a){
+  const grupos = a.grs.map(gr => {
+    const chips = gr.p.map(i => {
+      const nom = S.nom[cat.id+':'+i] || 'Pareja '+(i+1);
+      const d = S.disp[cat.id+':'+i] || [];
+      const tags = d.length ? d.map(b => `<span class="ptag">${esc(abrevBloque(b))}</span>`).join('') : '<span class="ptag ptag-libre">sin restricción</span>';
+      const sel = parMov && parMov.catId === cat.id && parMov.i === i ? ' sel' : '';
+      return `<div class="pchip${sel}" draggable="true" data-parchip="${i}">
+        <div class="pchip-top"><span class="pchip-nm">${esc(nom)}</span>
+        <span class="pchip-btns"><button class="pbtn" data-parmv="${i}" title="Intercambiar con otra pareja">⇄</button><button class="pbtn" data-paredit="${i}" title="Editar nombre y horarios">✎</button><button class="pbtn" data-pardel="${i}" title="Eliminar pareja del torneo">✕</button></span></div>
+        <div class="pchip-tags">${tags}</div></div>`;
+    }).join('');
+    return `<div class="pgrupo"><div class="pgrupo-h">Grupo ${gr.g}</div>${chips}</div>`;
+  }).join('');
+  let editor = '';
+  const ed = parEd && parEd.catId === cat.id ? parEd : null;
+  if(ed){
+    const tagBtns = BLOQUES_STD.map(b => `<button class="ptagsel${ed.disp.includes(b) ? ' on' : ''}" data-partag="${esc(b)}">${esc(abrevBloque(b))}</button>`).join('');
+    editor = `<div class="pareja-ed">
+      <div class="pgrupo-h">${ed.idx == null ? 'Agregar pareja' : 'Editar pareja'}</div>
+      <input id="parNom" type="text" placeholder="Apellido / Apellido" value="${esc(ed.nombre)}">
+      <div class="ptagsels">${tagBtns}</div>
+      <div class="pub-btns"><button class="pub-main" data-parsave="1">${ed.idx == null ? 'Agregar' : 'Guardar'}</button><button data-parcancel="1">Cancelar</button></div></div>`;
+  }
+  const hint = parMov && parMov.catId === cat.id
+    ? 'Elegí la otra pareja para intercambiarlas.'
+    : 'Arrastrá una pareja sobre otra para intercambiarlas de grupo (o tocá ⇄ y después la otra). Los grupos tienen tamaño fijo, así que el cambio de grupo es por intercambio.';
+  return `<div class="card"><div class="card-head"><h3>Parejas anotadas</h3><span class="tagm">${cat.parejas} parejas</span></div>
+    <div class="card-body"><div class="phint">${hint}</div><div class="pgrupos">${grupos}</div>${editor}${ed ? '' : '<button class="padd" data-paradd="1">+ Agregar pareja</button>'}</div></div>`;
+}
+
 function renderCat(){
   const cat = S.cats.find(c => c.id === catActiva);
   if(!cat){ $('#catTit').textContent = 'Sin categorías'; $('#catLede').textContent = ''; $('#catPanel').innerHTML = ''; $('#catN').textContent = '—'; return; }
@@ -1581,6 +1692,7 @@ function renderCat(){
     return;
   }
   let html = '';
+  if(ROL === 'org') html += renderPanelParejas(cat, a);
   const miIdx = (ROL === 'cliente' && miPareja && miPareja.split(':')[0] === cat.id) ? +miPareja.split(':')[1] : null;
   for(const gr of a.grs){
     const esMio = miIdx !== null && gr.p.includes(miIdx);
@@ -1982,7 +2094,7 @@ function renderReglas(){
   const cardPts = `<div class="rule-card"><h4>Puntos por partido</h4><ul>
       <li><b>Gana 2–0</b> — ${R.p20} pts</li><li><b>Gana en super tiebreak</b> — ${R.ptb} pts</li>
       <li><b>Pierde en super tiebreak</b> — ${R.dtb} pt</li><li><b>Pierde 0–2</b> — ${R.p02} pts</li></ul></div>`;
-  const cardDes = `<div class="rule-card"><h4>Desempate en el grupo</h4><ol>${orden}<li><b>Sorteo</b> — el motor te avisa</li></ol></div>`;
+  const cardDes = `<div class="rule-card"><h4>Desempate en el grupo</h4><ol>${orden}<li>Sorteo</li></ol></div>`;
   const cardSets = `<div class="rule-card"><h4>Sets válidos</h4><ul><li>6–0 a 6–5</li><li>7–5 y 7–6</li>
       <li>Tercer set: super tiebreak a 11, con 2 de diferencia</li><li>Lo demás se marca en rojo</li></ul></div>`;
   const cardDif = `<div class="rule-card"><h4>Diferencia de games</h4><ul><li>Suma los games de los <b>sets 1 y 2</b></li>
@@ -2403,7 +2515,7 @@ document.addEventListener('input', e => {
 });
 
 document.addEventListener('click', e => {
-  const b = e.target.closest('[data-act], [data-cat], [data-d], [data-mv], [data-drop], [data-unfix], [data-cancelmv], [data-clearfix], [data-modo], [data-verpub], [data-verorg], [data-pub], [data-copiar], [data-abrir], [data-cerrarpub], [data-descargar], [data-nubepub], [data-nubecopiar], [data-nubeabrir], [data-login], [data-logout], [data-impok], [data-impcancel], [data-aplicar], [data-elegirgrupo], [data-gridops], [data-elegirgrilla], [data-cerrargridops], [data-copiarorg]');
+  const b = e.target.closest('[data-act], [data-cat], [data-d], [data-mv], [data-drop], [data-unfix], [data-cancelmv], [data-clearfix], [data-modo], [data-verpub], [data-verorg], [data-pub], [data-copiar], [data-abrir], [data-cerrarpub], [data-descargar], [data-nubepub], [data-nubecopiar], [data-nubeabrir], [data-login], [data-logout], [data-impok], [data-impcancel], [data-aplicar], [data-elegirgrupo], [data-gridops], [data-elegirgrilla], [data-cerrargridops], [data-copiarorg], [data-parchip], [data-parmv], [data-pardel], [data-paredit], [data-paradd], [data-parsave], [data-parcancel], [data-partag]');
   if(!b) return;
   const d = b.dataset;
   if(d.descargar){ descargarArchivo(b); return; }
@@ -2431,6 +2543,30 @@ document.addEventListener('click', e => {
   if(d.abrir){ window.open($('#pubLink').value, '_blank'); return; }
   if(d.cat){ catActiva = d.cat; render(); return; }
   if(d.d !== undefined){ diaActivo = +d.d; renderGrilla(); return; }
+  if(d.parmv !== undefined){ const cat = S.cats.find(c => c.id === catActiva); if(!cat) return;
+    if(parMov && parMov.catId === cat.id && parMov.i === +d.parmv) parMov = null; else parMov = {catId:cat.id, i:+d.parmv};
+    render(); return; }
+  if(d.pardel !== undefined){ const cat = S.cats.find(c => c.id === catActiva); if(cat) eliminarPareja(cat, +d.pardel); return; }
+  if(d.paredit !== undefined){ const cat = S.cats.find(c => c.id === catActiva); if(!cat) return;
+    const i = +d.paredit;
+    parEd = {catId:cat.id, idx:i, nombre:S.nom[cat.id+':'+i] || '', disp:(S.disp[cat.id+':'+i] || []).slice()};
+    parMov = null; render(); return; }
+  if(d.paradd){ const cat = S.cats.find(c => c.id === catActiva); if(!cat) return;
+    parEd = {catId:cat.id, idx:null, nombre:'', disp:[]}; parMov = null; render(); return; }
+  if(d.partag){ const inp = document.getElementById('parNom'); if(inp && parEd) parEd.nombre = inp.value;
+    const ix = parEd.disp.indexOf(d.partag); ix >= 0 ? parEd.disp.splice(ix,1) : parEd.disp.push(d.partag);
+    render(); return; }
+  if(d.parsave){ const inp = document.getElementById('parNom'); if(inp && parEd) parEd.nombre = inp.value;
+    if(!parEd || !parEd.nombre.trim()){ alert('Poné el nombre de la pareja.'); return; }
+    guardarPareja(); return; }
+  if(d.parcancel){ parEd = null; render(); return; }
+  if(d.parchip !== undefined){
+    if(parMov && parMov.catId === catActiva){
+      const cat = S.cats.find(c => c.id === catActiva);
+      if(cat && swapParejas(cat, parMov.i, +d.parchip)){ parMov = null; guardar(); render(); }
+      else { parMov = null; render(); }
+    }
+    return; }
   if(d.gridops){ mostrarOpcionesGrilla(opcionesGrilla()); return; }
   if(d.elegirgrilla !== undefined){
     const op = opsGrilla && opsGrilla[+d.elegirgrilla];
@@ -2799,6 +2935,26 @@ document.addEventListener('change', e => {
     if(v === '') delete S.fijLlave[key]; else S.fijLlave[key] = +v;
     guardar(); render();
   }
+});
+
+/* Drag & drop de parejas entre grupos (intercambio) */
+document.addEventListener('dragstart', e => {
+  const c = e.target.closest && e.target.closest('[data-parchip]');
+  if(c){ e.dataTransfer.setData('text/plain', 'par:' + c.dataset.parchip); e.dataTransfer.effectAllowed = 'move'; }
+});
+document.addEventListener('dragover', e => {
+  const c = e.target.closest && e.target.closest('[data-parchip]');
+  if(c) e.preventDefault();
+});
+document.addEventListener('drop', e => {
+  const c = e.target.closest && e.target.closest('[data-parchip]');
+  if(!c) return;
+  e.preventDefault();
+  const dt = e.dataTransfer.getData('text/plain');
+  if(!dt || dt.indexOf('par:') !== 0) return;
+  const i = +dt.slice(4), j = +c.dataset.parchip;
+  const cat = S.cats.find(x => x.id === catActiva);
+  if(cat && i !== j && swapParejas(cat, i, j)){ parMov = null; guardar(); render(); }
 });
 
 /* Enter en el formulario de login = Ingresar */
