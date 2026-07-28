@@ -705,7 +705,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v4.8 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v4.9 · Julio 2026</p>
   </div>
 </footer>
 
@@ -1506,7 +1506,11 @@ function renderTabs(){
   if(esOrg){
     if(catActiva !== '__cfg__' && catActiva !== '__fin__' && catActiva !== '__hor__' && !ids.includes(catActiva)) catActiva = '__cfg__';
   } else {
-    if(!esDia(catActiva) && catActiva !== '__fin__' && !ids.includes(catActiva)) catActiva = ids.length ? ids[0] : null;
+    if(!esDia(catActiva) && catActiva !== '__fin__' && !ids.includes(catActiva)){
+      let di = diaDeHoy();
+      if(di == null || di < 0 || di >= S.dias.length) di = 0;
+      catActiva = S.dias.length ? ('__d'+di+'__') : (ids.length ? ids[0] : null);
+    }
     if(esDia(catActiva) && +catActiva.match(/\d+/)[0] >= S.dias.length) catActiva = ids.length ? ids[0] : null;
   }
   const tabCat = c => { const n = partidosDe(c).length; return `<button class="tab${n ? '' : ' void'}" role="tab" data-cat="${c.id}" style="--cc:${colorCat(c)}" aria-selected="${c.id === catActiva}"><span class="dot"></span>${esc(c.nom)}<i>${n}</i></button>`; };
