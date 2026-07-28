@@ -297,13 +297,13 @@ table.pos td .p{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:
 .ops-box{background:#fff;max-width:460px;width:100%;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.35);}
 #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(12px);background:var(--tinta);color:#fff;font-family:var(--mono);font-size:12px;letter-spacing:.02em;padding:10px 16px;opacity:0;pointer-events:none;transition:opacity .2s ease, transform .2s ease;z-index:200;box-shadow:0 6px 24px rgba(0,0,0,.25);}
 #toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
-.pgrupos{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:9px;}
+.pgrupos{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:9px;}
 .pgrupo{border:1px solid var(--linea);background:#fff;padding:7px;}
 .pgrupo-h{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--tinta-suave);margin-bottom:6px;}
 .pchip{border:1px solid var(--linea);background:var(--pared);padding:5px 6px;margin:0 0 5px;cursor:grab;}
 .pchip.sel{outline:2px solid var(--red);outline-offset:-1px;}
 .pchip-top{display:flex;justify-content:space-between;gap:6px;align-items:center;}
-.pchip-nm{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pchip-nm{font-size:12.5px;font-weight:600;line-height:1.25;overflow-wrap:break-word;min-width:0;}
 .pchip-btns{display:flex;gap:3px;flex:none;}
 .pbtn{border:1px solid var(--linea);background:#fff;font-size:11px;line-height:1;padding:2px 5px;cursor:pointer;color:var(--tinta-suave);}
 .pbtn:hover{border-color:var(--red);color:var(--red-osc);}
@@ -698,7 +698,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v4.2 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v4.3 · Julio 2026</p>
   </div>
 </footer>
 
@@ -2027,8 +2027,8 @@ function renderGrilla(){
     <span class="modo-hint">${manual
       ? 'La grilla es tuya: mové con ⇄ o arrastrando, y sacá partidos con ✕. Cuando esté lista, tocá Aplicar para publicarla al jugador.'
       : forms
-        ? 'Cada grupo se ubica en un bloque donde TODAS sus parejas marcaron disponibilidad; los playoffs van al domingo. Ajustá lo que quieras y tocá Aplicar para dejarla definitiva.'
-        : 'El motor acomoda todo solo. Ajustá lo que quieras y tocá Aplicar para dejarla definitiva y publicarla al jugador.'}</span>
+        ? 'Completa lo que falta según la disponibilidad del formulario (cada grupo en un bloque donde TODAS sus parejas pueden; playoffs al domingo) sin tocar lo ya ubicado. Para rearmar desde cero, vaciá la grilla primero. Al final, Aplicar.'
+        : 'El motor completa lo que falta sin tocar lo ya ubicado. Para rearmar desde cero, vaciá la grilla primero. Al final, Aplicar.'}</span>
   </div>`;
 
   $('#dayTabs').innerHTML = S.dias.map((d,i) => `<button data-d="${i}" aria-selected="${i === diaActivo}">${esc(d.nom)}</button>`).join('');
@@ -2594,10 +2594,8 @@ document.addEventListener('click', e => {
     if(d.modo === 'manual'){
       if(S.modoGrilla !== 'manual'){ congelarGrilla(); S.modoGrilla = 'manual'; }
     } else {
-      const hayFijos = S.fijos && Object.keys(S.fijos).length;
-      const nom = d.modo === 'forms' ? 'Formulario' : 'Automática';
-      if(hayFijos && !confirm('Rearmar la grilla en modo '+nom+': se recalculan todos los horarios y se pierden las ubicaciones manuales. ¿Seguimos?')) return;
-      S.fijos = {}; S.modoGrilla = d.modo;
+      S.modoGrilla = d.modo;   // completa lo que falta; lo ya ubicado se mantiene
+      if(S.fijos && Object.keys(S.fijos).length) toast('Se completa lo que falta · lo ya ubicado se mantiene');
     }
     moviendo = null; guardar(); render(); return;
   }
