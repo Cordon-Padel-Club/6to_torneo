@@ -705,7 +705,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v5.2 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v5.3 · Julio 2026</p>
   </div>
 </footer>
 
@@ -2234,7 +2234,7 @@ function renderAhora(){
     prox = prox.filter(x => x.hora === t0);
   }
   const mine = miPareja;
-  let html = `<p class="clock">Hoy es <b>${['domingo','lunes','martes','miércoles','jueves','viernes','sábado'][reloj.getDay()]}</b>, son las <b>${clk}</b>. ${hoy === null ? 'No hay jornada programada para hoy — mirá la grilla completa abajo.' : ''}</p>`;
+  let html = `<p class="clock">Hoy es <b>${['domingo','lunes','martes','miércoles','jueves','viernes','sábado'][reloj.getDay()]}</b>, son las <b>${clk}</b>. ${hoy === null ? 'No hay jornada programada para hoy.' : ''}</p>`;
 
   if(hoy !== null){
     html += `<p class="live-lbl now">Jugando ahora · ${ahora.length}</p>`;
