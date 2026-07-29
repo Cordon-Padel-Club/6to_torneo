@@ -705,7 +705,7 @@ body[data-rol="cliente"] .vs .n{display:none;}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">Esqueleto de torneo · v4.9 · Julio 2026</p>
+    <p class="sig" id="footSig">Esqueleto de torneo · v5.0 · Julio 2026</p>
   </div>
 </footer>
 
@@ -1732,7 +1732,7 @@ function renderCat(){
     const ev = fin ? evalPartido(cat, fin) : null;
     const camp = (ev && ev.estado === 'ok') ? ev.gid : null;
     html += `<div class="champ"><span class="lbl">Campeón<br>${esc(cat.nom)}</span>
-      <span class="nm ${camp !== null && camp !== undefined ? '' : 'pend'}">${camp !== null && camp !== undefined ? esc(nombrePareja(cat,camp)) : 'Se define en la final'}</span></div>`;
+      <span class="nm ${camp !== null && camp !== undefined ? '' : 'pend'}">${camp !== null && camp !== undefined ? esc(nombrePareja(cat,camp)) : ''}</span></div>`;
     html += `</div></div>`;
   } else {
     html += `<div class="card"><div class="card-head"><h3>Fase final</h3><span class="tagm">sin armar</span></div>
@@ -2367,7 +2367,7 @@ function bracketHTML(cat, est, u){
     cols += `<div class="lv-col"><div class="lv-fase">${esc(rd.fase)}</div><div class="lv-nodos">${nodos}</div></div>`;
   });
   const finN = est.rounds[est.rounds.length-1].nodos.find(n => n.tipo === 'match');
-  let campTxt = 'Se define en la final', campPend = true;
+  let campTxt = '', campPend = true;
   if(finN){ const ev = evalPartido(cat, finN.m); if(ev.estado === 'ok' && ev.gid != null){ campTxt = nombrePareja(cat, ev.gid); campPend = false; } }
   cols += `<div class="lv-col lv-col-camp"><div class="lv-fase">Campe\u00f3n</div><div class="lv-nodos"><div class="lv-champ ${campPend ? 'lv-pend' : ''}"><span class="lv-champ-ico">\ud83c\udfc6</span><span class="lv-nm">${esc(campTxt)}</span></div></div></div>`;
   return `<div class="lv-scroll"><div class="lv-bracket">${cols}</div></div>`;
