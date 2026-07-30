@@ -475,16 +475,19 @@ body[data-rol="cliente"] #heroSub{display:none;}
 
 /* ===== AHORA EN CANCHA ===== */
 .live-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:9px;}
-.live{border:1px solid var(--linea);background:#fff;border-left:4px solid var(--cc,var(--red));}
+.live{border:1px solid var(--linea);background:#fff;border-left:4px solid var(--cc,var(--red));display:flex;flex-direction:column;}
 .live .lh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:6px 10px 5px;background:var(--pared-2);border-bottom:1px solid var(--linea-suave);}
 .live .lh .cch{font-family:var(--display);font-size:15px;font-weight:700;text-transform:uppercase;}
 .live .lh .cat{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:#fff;background:var(--cc,var(--pista));padding:2px 5px 1px;}
-.live .lb{padding:8px 10px;}
+.live .lb{padding:8px 10px;flex:1;display:flex;flex-direction:column;}
 .live .vs{display:flex;align-items:center;gap:7px;font-size:14px;margin:0 0 3px;}
 .live .vs:last-child{margin:0;}
 .live .vs .n{font-family:var(--mono);font-size:9px;color:#fff;background:var(--pista);padding:2px 5px 1px;flex:0 0 auto;}
 .live .vs.pend{color:var(--tinta-suave);font-style:italic;font-size:13px;}
-.live .meta{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--tinta-suave);margin-top:6px;}
+.live .meta{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--tinta-suave);margin-top:auto;padding-top:6px;}
+.live .lh-r{display:flex;align-items:center;gap:6px;}
+.live .lh-yt{display:inline-flex;align-items:center;line-height:0;}
+.live .lh-yt svg{display:block;}
 .live.mine{border-left-width:6px;box-shadow:inset 0 0 0 2px var(--cc,var(--red));}
 .live-empty{font-family:var(--mono);font-size:12px;color:var(--tinta-suave);padding:10px;border:1px dashed var(--linea);background:var(--pared);}
 .live-lbl{font-family:var(--mono);font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--tinta-suave);margin:16px 0 7px;display:flex;align-items:center;gap:9px;}
@@ -782,7 +785,7 @@ body[data-tv] #tvRoot{display:flex;}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">v8.3 · Julio 2026</p>
+    <p class="sig" id="footSig">v8.5 · Julio 2026</p>
   </div>
 </footer>
 
@@ -882,7 +885,7 @@ async function guardar(){
   try{ localStorage.setItem('padel:esqueleto', JSON.stringify(S)); }catch(e){}
   nubeGuardarDebounced();
 }
-function normalizar(o){ o.fijos = o.fijos || {}; o.nom = o.nom || {}; o.disp = o.disp || {}; o.fijLlave = o.fijLlave || {}; o.res = o.res || {}; o.reglas = o.reglas || {}; o.modoGrilla = o.modoGrilla || 'auto'; o.cats = o.cats || []; o.dias = o.dias || []; o.fecha = o.fecha || ''; return o; }
+function normalizar(o){ o.yt = o.yt || {}; o.fijos = o.fijos || {}; o.nom = o.nom || {}; o.disp = o.disp || {}; o.fijLlave = o.fijLlave || {}; o.res = o.res || {}; o.reglas = o.reglas || {}; o.modoGrilla = o.modoGrilla || 'auto'; o.cats = o.cats || []; o.dias = o.dias || []; o.fecha = o.fecha || ''; return o; }
 async function cargar(){
   try{
     let raw = null;
@@ -897,11 +900,11 @@ async function cargar(){
 function estadoPublicable(){
   // sólo lo que el jugador necesita ver; sin flags de edición
   return {t:S.torneo, fx:S.fecha, cn:S.canchas, dd:S.dias, rr:S.reglas, mg:S.modoGrilla,
-          ct:S.cats, rs:S.res, nm:S.nom, dp:S.disp, fj:S.fijos, fl:S.fijLlave};
+          ct:S.cats, rs:S.res, nm:S.nom, dp:S.disp, fj:S.fijos, fl:S.fijLlave, yt:S.yt};
 }
 function expandir(p){
   return normalizar({torneo:p.t, fecha:p.fx, canchas:p.cn, dias:p.dd, reglas:p.rr, modoGrilla:p.mg,
-          cats:p.ct, res:p.rs, nom:p.nm, disp:p.dp, fijos:p.fj, fijLlave:p.fl});
+          cats:p.ct, res:p.rs, nom:p.nm, disp:p.dp, fijos:p.fj, fijLlave:p.fl, yt:p.yt});
 }
 function generarLink(){
   const json = JSON.stringify(estadoPublicable());
@@ -1579,11 +1582,14 @@ function renderCfg(){
   }).join('');
 
   const R = S.reglas;
+  const ytF = Array.from({length:S.canchas||1}, (_,i) => { const c=i+1; return `<div class="f" style="grid-column:1/-1"><label>YouTube Cancha ${c}</label><input type="url" placeholder="https://youtube.com/watch?v=..." data-fid="yt${c}" data-set="yt" data-i="${c}" value="${esc((S.yt||{})[c]||'')}"></div>`; }).join('');
   $('#cfgPanel').innerHTML = `
     <div class="card"><div class="card-head"><h3>Sede</h3><span class="tagm">${totalFranjas()} franjas · ${S.canchas} canchas</span></div>
       <div class="card-body"><div class="fields">
         <div class="f"><label>Canchas</label><input type="number" min="1" max="12" data-fid="canchas" data-set="canchas" value="${esc(S.canchas)}"></div>
       </div></div></div>
+    <div class="card"><div class="card-head"><h3>Transmisiones (YouTube)</h3><span class="tagm">Un enlace por cancha</span></div>
+      <div class="card-body"><div class="fields">${ytF}</div></div></div>
     ${dias}
     <button class="add" data-act="addDia">+ Agregar día</button>
     <div style="height:16px"></div>
@@ -2329,8 +2335,10 @@ function tarjetaLive(u, mine){
     return `<div class="vs${L.num ? '' : ' pend'}">${L.num ? `<span class="n">${pad(L.num)}</span>` : ''}<span>${esc(L.txt)}${win ? ' <b class="wg">G</b>' : ''}</span></div>`;
   };
   const esMia = mine && (mine === cat.id+':'+A.id || mine === cat.id+':'+B.id);
+  const yt = (S.yt || {})[u.cancha];
+  const ytIcon = yt ? `<a class="lh-yt" href="${esc(yt)}" target="_blank" rel="noopener" title="Ver transmisi\u00f3n en vivo"><svg viewBox="0 0 24 24" width="19" height="19"><path fill="#f00" d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8z"/><path fill="#fff" d="M9.5 15.5v-7l6 3.5z"/></svg></a>` : '';
   return `<div class="live${esMia ? ' mine' : ''}" style="--cc:${colorCat(cat)}">
-    <div class="lh"><span class="cch">Cancha ${u.cancha}</span><span class="cat">${esc(cat.nom)}</span></div>
+    <div class="lh"><span class="cch">Cancha ${u.cancha}</span><span class="lh-r">${ytIcon}<span class="cat">${esc(cat.nom)}</span></span></div>
     <div class="lb">${linea(A,'a')}${linea(B,'b')}
       <div class="meta">${esc(u.dia)} ${esc(u.hora)} · ${esc(m.fase)} ${esc(m.id)}${cerrado ? ' · jugado' : ''}</div>
     </div></div>`;
@@ -2657,6 +2665,7 @@ document.addEventListener('input', e => {
       case 'cat.grupos': S.cats[+d.i].grupos = +v; break;
       case 'cat.pasan': S.cats[+d.i].pasan = +v; break;
       case 'cat.repes': S.cats[+d.i].repes = +v; break;
+      case 'yt': (S.yt = S.yt || {})[d.i] = v.trim(); break;
     }
   } else if(t.id === 'tNom'){ S.torneo = t.value; }
   else if(t.id === 'tFecha'){ S.fecha = t.value; }
