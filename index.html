@@ -476,8 +476,8 @@ body[data-rol="cliente"] #heroSub{display:none;}
 /* ===== AHORA EN CANCHA ===== */
 .live-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:9px;}
 .live{border:1px solid var(--linea);background:#fff;border-left:4px solid var(--cc,var(--red));display:flex;flex-direction:column;}
-.live .lh{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 8px;padding:6px 10px 5px;background:var(--pared-2);border-bottom:1px solid var(--linea-suave);}
-.live .lh .cch{font-family:var(--display);font-size:15px;font-weight:700;text-transform:uppercase;white-space:nowrap;}
+.live .lh{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:4px 8px;padding:6px 10px 5px;background:var(--pared-2);border-bottom:1px solid var(--linea-suave);}
+.live .lh .cch{font-family:var(--display);font-size:15px;font-weight:700;text-transform:uppercase;white-space:nowrap;display:inline-flex;align-items:center;}
 .live .lh .cat{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:#fff;background:var(--cc,var(--pista));padding:2px 5px 1px;white-space:nowrap;}
 .live .lb{padding:8px 10px;flex:1;display:flex;flex-direction:column;}
 .live .vs{display:flex;align-items:center;gap:7px;font-size:14px;margin:0 0 3px;}
@@ -830,7 +830,7 @@ body[data-tab="res"] #config,body[data-tab="res"] #validador,body[data-tab="res"
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">v10.2 · Julio 2026</p>
+    <p class="sig" id="footSig">v10.4 · Julio 2026</p>
   </div>
 </footer>
 
@@ -2549,15 +2549,19 @@ function renderAhora(){
   let ahora = [], prox = [];
   if(hoy !== null){
     const largo = franjaLargo(hoy);
-    Object.values(u).forEach(x => {
-      if(x.di !== hoy) return;
-      const finOk = evalPartido(x.cat, x.m).estado === 'ok';
-      const ini = h2min(x.hora), fin = ini + largo;
-      if(min < ini){ if(!finOk){ x._est = 'proximo'; prox.push(x); } return; }
-      if(min < fin){ x._est = finOk ? 'finalizado' : 'enhora'; ahora.push(x); }
-      else if(!finOk){ x._est = 'atrasado'; ahora.push(x); }
+    // Un solo partido activo por cancha: el más temprano SIN resultado.
+    // El siguiente de esa cancha queda bloqueado hasta que ese termine.
+    const porCancha = {};
+    Object.values(u).forEach(x => { if(x.di === hoy){ (porCancha[x.cancha] = porCancha[x.cancha] || []).push(x); } });
+    Object.values(porCancha).forEach(lista => {
+      lista.sort((a,b) => h2min(a.hora) - h2min(b.hora));
+      const cur = lista.find(x => evalPartido(x.cat, x.m).estado !== 'ok');
+      if(!cur) return;
+      const ini = h2min(cur.hora), fin = ini + largo;
+      if(min >= ini){ cur._est = (min < fin) ? 'enhora' : 'atrasado'; ahora.push(cur); }
+      else { cur._est = 'proximo'; prox.push(cur); }
     });
-    ahora.sort((a,b) => h2min(a.hora) - h2min(b.hora));
+    ahora.sort((a,b) => a.cancha - b.cancha);
     prox.sort((a,b) => h2min(a.hora) - h2min(b.hora));
     const t0 = prox.length ? prox[0].hora : null;
     prox = prox.filter(x => x.hora === t0);
@@ -3433,15 +3437,19 @@ function tvAhoraData(){
   let ahora = [], prox = [];
   if(hoy !== null){
     const largo = franjaLargo(hoy);
-    Object.values(u).forEach(x => {
-      if(x.di !== hoy) return;
-      const finOk = evalPartido(x.cat, x.m).estado === 'ok';
-      const ini = h2min(x.hora), fin = ini + largo;
-      if(min < ini){ if(!finOk){ x._est = 'proximo'; prox.push(x); } return; }
-      if(min < fin){ x._est = finOk ? 'finalizado' : 'enhora'; ahora.push(x); }
-      else if(!finOk){ x._est = 'atrasado'; ahora.push(x); }
+    // Un solo partido activo por cancha: el más temprano SIN resultado.
+    // El siguiente de esa cancha queda bloqueado hasta que ese termine.
+    const porCancha = {};
+    Object.values(u).forEach(x => { if(x.di === hoy){ (porCancha[x.cancha] = porCancha[x.cancha] || []).push(x); } });
+    Object.values(porCancha).forEach(lista => {
+      lista.sort((a,b) => h2min(a.hora) - h2min(b.hora));
+      const cur = lista.find(x => evalPartido(x.cat, x.m).estado !== 'ok');
+      if(!cur) return;
+      const ini = h2min(cur.hora), fin = ini + largo;
+      if(min >= ini){ cur._est = (min < fin) ? 'enhora' : 'atrasado'; ahora.push(cur); }
+      else { cur._est = 'proximo'; prox.push(cur); }
     });
-    ahora.sort((a,b) => h2min(a.hora) - h2min(b.hora));
+    ahora.sort((a,b) => a.cancha - b.cancha);
     prox.sort((a,b) => h2min(a.hora) - h2min(b.hora));
     const t0 = prox.length ? prox[0].hora : null;
     prox = prox.filter(x => x.hora === t0);
