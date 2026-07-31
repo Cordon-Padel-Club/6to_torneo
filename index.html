@@ -570,7 +570,8 @@ body[data-tv] #tvRoot{display:flex;}
 .tvt td.b{font-weight:800;color:var(--red);}
 .tvt tr.q td{background:#eaebed;}
 .tvt tr.q td:first-child{box-shadow:inset 6px 0 0 var(--red);}
-.tvt tr.q td.nm{color:var(--red);}
+.tvt tr.q td.nm{color:var(--tinta);font-weight:700;}
+.tvt tr.nq td.nm{color:var(--tinta-suave);}
 .tvg-res{padding:13px 20px 16px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--linea);}
 .tvr{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px;font-size:19px;color:var(--tinta-suave);}
 .tvr .w{color:var(--tinta);font-weight:700;}
@@ -829,7 +830,7 @@ body[data-tab="res"] #config,body[data-tab="res"] #validador,body[data-tab="res"
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">v10.0 · Julio 2026</p>
+    <p class="sig" id="footSig">v10.1 · Julio 2026</p>
   </div>
 </footer>
 
@@ -3410,7 +3411,8 @@ function tvGrupoCard(cat, gr, a){
   const sgn = n => (n>0?'+':'')+n;
   const filas = tb.filas.map((f,k) => {
     const q = tb.cerrada && k < a.pasan;
-    return `<tr class="${q?'q':''}"><td class="n">${k+1}</td><td class="nm">${esc(nombrePareja(cat,f.i))}</td><td class="n">${f.pj}</td><td class="n">${f.pg}</td><td class="n b">${f.pts}</td><td class="n">${sgn(f.gf-f.gc)}</td></tr>`;
+    const nq = tb.cerrada && k >= a.pasan;
+    return `<tr class="${q?'q':''}${nq?' nq':''}"><td class="n">${k+1}</td><td class="nm">${esc(nombrePareja(cat,f.i))}</td><td class="n">${f.pj}</td><td class="n">${f.pg}</td><td class="n b">${f.pts}</td><td class="n">${sgn(f.gf-f.gc)}</td></tr>`;
   }).join('');
   return `<div class="tvg"><div class="tvg-h" style="background:${colorCat(cat)}">Grupo ${gr.g}</div>
     <table class="tvt"><thead><tr><th></th><th>Pareja</th><th>PJ</th><th>PG</th><th>Pts</th><th>Dif</th></tr></thead><tbody>${filas}</tbody></table></div>`;
