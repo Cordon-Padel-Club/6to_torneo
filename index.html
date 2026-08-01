@@ -655,32 +655,51 @@ body[data-tab="res"] #config,body[data-tab="res"] #validador,body[data-tab="res"
 
 
 /* ===== TV2 · pantalla EN VIVO ===== */
-.tv2l-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3vh;width:100%;padding:0 2.5vw;transform:translateY(-3vh);}
-.tv2l-title{display:flex;align-items:center;gap:1.1vw;font-family:var(--display);font-size:4vh;font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:var(--pista);animation:tv2Fade .5s both;}
-.tv2l-dot{width:1.7vh;height:1.7vh;border-radius:50%;background:var(--red);animation:tv2Pulse 1.3s ease-in-out infinite;}
-.tv2l-cols{display:flex;flex-direction:row;gap:1.8vw;width:min(82vw,1540px);align-items:stretch;}
-.tv2l-card{flex:1;min-width:0;min-height:45vh;background:#fff;border-top:1vh solid var(--cc,var(--red));box-shadow:0 1.2vh 3.2vh rgba(0,0,0,.15);padding:2.7vh 1.7vw 2.9vh;display:flex;flex-direction:column;}
-.tv2l-top{margin-bottom:2vh;text-align:center;}
+.tv2l-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3.2vh;width:100%;padding:0 2.5vw;transform:translateY(-3vh);}
+.tv2l-title{display:flex;align-items:center;gap:1.1vw;font-family:var(--body);font-size:4.2vh;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--pista);animation:tv2Fade .5s both;}
+.tv2l-dot{width:1.8vh;height:1.8vh;border-radius:50%;background:var(--red);box-shadow:0 0 1.4vh rgba(207,32,39,.7);animation:tv2Pulse 1.3s ease-in-out infinite;}
+.tv2l-cols{display:flex;flex-direction:row;gap:1.8vw;width:min(84vw,1560px);align-items:stretch;}
+.tv2l-card{position:relative;flex:1;min-width:0;min-height:47vh;background:#fff;border-top:1.2vh solid var(--cc,var(--red));box-shadow:0 1.8vh 4.4vh rgba(21,23,26,.20);padding:3.2vh 2vw 3.4vh;display:flex;flex-direction:column;overflow:hidden;animation:tv2CardIn .62s cubic-bezier(.16,1,.3,1) both;}
+.tv2l-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1.2vh;background:var(--cc,var(--red));filter:blur(9px);opacity:.55;}
+.tv2l-card::after{content:'';position:absolute;right:-6vh;bottom:-8vh;width:26vh;height:26vh;background:radial-gradient(circle, var(--cc,var(--red)) 0%, transparent 68%);opacity:.06;pointer-events:none;}
+.tv2l-top{margin-bottom:2.4vh;text-align:center;position:relative;z-index:1;}
 .tv2l-cancha{font-family:var(--body);font-size:4.66vh;font-weight:800;text-transform:uppercase;letter-spacing:.01em;color:var(--pista);line-height:1;}
-.tv2l-tags{display:flex;flex-wrap:wrap;justify-content:center;gap:.7vw;margin-top:1.4vh;}
+.tv2l-tags{display:flex;flex-wrap:wrap;justify-content:center;gap:.7vw;margin-top:1.7vh;}
 .tv2l-cat{font-family:var(--mono);font-size:1.7vh;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#fff;background:var(--cc,var(--red));padding:.6vh .9vw .5vh;}
 .tv2l-est{font-family:var(--mono);font-size:1.6vh;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:#fff;padding:.6vh .9vw .5vh;}
 .tv2l-est.hora{background:#1f7a34;}
 .tv2l-est.atr{background:#d9822b;}
-.tv2l-body{flex:1;display:flex;flex-direction:column;justify-content:center;}
-.tv2l-row{display:flex;align-items:center;justify-content:space-between;gap:1.2vw;padding:1.2vh 0;}
-.tv2l-team{font-family:var(--body);font-size:4vh;font-weight:600;color:var(--tinta);line-height:1.14;flex:1;min-width:0;text-align:left;}
-.tv2l-row.win .tv2l-team{font-weight:800;}
-.tv2l-body .tv2l-row:last-child{flex-direction:row-reverse;}
-.tv2l-body .tv2l-row:last-child .tv2l-team{text-align:right;}
-.tv2l-vs{text-align:center;font-family:'Bangers',cursive;font-size:3.8vh;font-weight:400;letter-spacing:.06em;color:var(--red);padding:.7vh 0;}
-.tv2l-sets{display:flex;gap:.8vw;flex:none;align-self:center;}
-.tv2l-sets span{font-family:var(--mono);font-size:3vh;font-weight:700;color:var(--tinta-suave);min-width:2.6vh;text-align:center;}
-.tv2l-sets span.win{color:var(--red);}
+.tv2l-body{flex:1;display:flex;flex-direction:column;justify-content:center;gap:1.6vh;position:relative;z-index:1;}
+.tv2l-team{font-family:var(--display);font-size:4.6vh;font-weight:600;color:var(--tinta);line-height:1.04;text-align:left;letter-spacing:.005em;}
+.tv2l-team.der{text-align:right;}
+.tv2l-team.win{font-weight:700;}
+.tv2l-vs{display:flex;align-items:center;justify-content:center;gap:1.2vw;font-family:'Bangers',cursive;font-size:4vh;letter-spacing:.08em;color:var(--red);}
+.tv2l-vs-line{flex:1;height:2px;background:linear-gradient(90deg,transparent,var(--linea));}
+.tv2l-vs-line:last-child{background:linear-gradient(90deg,var(--linea),transparent);}
 .tv2l-libre{border-top-color:var(--linea);justify-content:center;align-items:center;text-align:center;}
-.tv2l-libre-msg{margin-top:2vh;font-family:var(--display);font-size:2.7vh;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--linea);line-height:1.25;}
+.tv2l-libre::before{background:var(--linea);opacity:.4;}
+.tv2l-libre::after{background:radial-gradient(circle,var(--linea) 0%,transparent 68%);opacity:.05;}
+.tv2l-libre-msg{margin-top:2vh;font-family:var(--body);font-size:2.9vh;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--linea);line-height:1.25;}
 .tv2l-empty{font-family:var(--display);font-size:4vh;text-transform:uppercase;letter-spacing:.12em;color:var(--tinta-suave);}
-@keyframes tv2CardIn{from{opacity:0;transform:translateY(4vh) scale(.98);}to{opacity:1;transform:none;}}
+/* ===== TV2 · pantalla POSICIONES ===== */
+.tv2g-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2.8vh;width:100%;padding:0 1.5vw;}
+.tv2g-title{letter-spacing:.07em;}
+.tv2g-grid{display:grid;justify-content:center;align-content:center;gap:2.4vh 1.5vw;}
+.tv2g-card{position:relative;height:30vh;background:#fff;border-top:1vh solid var(--cc,var(--red));box-shadow:0 1.4vh 3.6vh rgba(21,23,26,.18);padding:1.9vh 1.4vw;overflow:hidden;display:flex;flex-direction:column;animation:tv2CardIn .55s cubic-bezier(.16,1,.3,1) both;}
+.tv2g-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1vh;background:var(--cc,var(--red));filter:blur(8px);opacity:.5;}
+.tv2g-card::after{content:'';position:absolute;right:-5vh;bottom:-6vh;width:20vh;height:20vh;background:radial-gradient(circle,var(--cc,var(--red)) 0%,transparent 68%);opacity:.06;pointer-events:none;}
+.tv2g-head{font-family:var(--body);font-size:3vh;font-weight:800;text-transform:uppercase;letter-spacing:.01em;color:var(--pista);text-align:center;line-height:1;margin-bottom:1.5vh;position:relative;z-index:1;}
+.tv2g-table{width:100%;border-collapse:collapse;position:relative;z-index:1;table-layout:fixed;}
+.tv2g-table th{font-family:var(--mono);font-size:1.35vh;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--tinta-suave);padding:.4vh .3vw;text-align:center;border-bottom:2px solid var(--linea-suave);width:3.4vh;}
+.tv2g-table th:nth-child(2){text-align:left;width:auto;}
+.tv2g-table td{font-family:var(--mono);font-size:1.95vh;font-weight:700;color:var(--tinta-suave);padding:.6vh .3vw;text-align:center;border-bottom:1px solid #eef0f2;}
+.tv2g-table tr:last-child td{border-bottom:none;}
+.tv2g-table td.p{color:var(--tinta-suave);}
+.tv2g-table td.nm{font-family:var(--display);font-size:2.25vh;font-weight:600;color:var(--tinta);text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tv2g-table td.pts{color:var(--red);}
+.tv2g-table tr.q td.nm{font-weight:800;color:var(--pista);}
+.tv2g-table tr.nq td.nm{color:var(--tinta-suave);}
+@keyframes tv2CardIn{from{opacity:0;transform:translateY(4vh) scale(.97);}to{opacity:1;transform:none;}}
 @keyframes tv2Fade{from{opacity:0;}to{opacity:1;}}
 @keyframes tv2Pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(.65);}}
 
@@ -879,7 +898,7 @@ body[data-tab="res"] #config,body[data-tab="res"] #validador,body[data-tab="res"
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">v12.4 · Julio 2026</p>
+    <p class="sig" id="footSig">v12.8 · Julio 2026</p>
   </div>
 </footer>
 
@@ -3618,12 +3637,6 @@ function tv2LiveHTML(){
     const cat = x.cat, m = x.m;
     const ev = evalPartido(cat, m);
     const nA = br(nombrePareja(cat, ev.iA)), nB = br(nombrePareja(cat, ev.iB));
-    const r = S.res[m.key] || {};
-    let setsA = '', setsB = '';
-    for(let i=1;i<=3;i++){
-      const a=r['s'+i+'a'], b=r['s'+i+'b']; const has=(a!==''&&a!=null&&b!==''&&b!=null);
-      if(has){ setsA += `<span class="${+a>+b?'win':''}">${esc(a)}</span>`; setsB += `<span class="${+b>+a?'win':''}">${esc(b)}</span>`; }
-    }
     const wA = ev.gan==='a'?' win':'', wB = ev.gan==='b'?' win':'';
     const est = x._est==='atrasado' ? '<span class="tv2l-est atr">Atrasado</span>' : '<span class="tv2l-est hora">En hora</span>';
     cols += `<div class="tv2l-card" style="--cc:${colorCat(cat)};animation-delay:${delay}s">
@@ -3632,13 +3645,31 @@ function tv2LiveHTML(){
         <div class="tv2l-tags"><span class="tv2l-cat">${esc(cat.nom)}</span>${est}</div>
       </div>
       <div class="tv2l-body">
-        <div class="tv2l-row${wA}"><span class="tv2l-team">${nA}</span><span class="tv2l-sets">${setsA}</span></div>
-        <div class="tv2l-vs">VS</div>
-        <div class="tv2l-row${wB}"><span class="tv2l-team">${nB}</span><span class="tv2l-sets">${setsB}</span></div>
+        <div class="tv2l-team${wA}">${nA}</div>
+        <div class="tv2l-vs"><span class="tv2l-vs-line"></span>VS<span class="tv2l-vs-line"></span></div>
+        <div class="tv2l-team der${wB}">${nB}</div>
       </div>
     </div>`;
   }
   return `<div class="tv2l-wrap"><div class="tv2l-title"><span class="tv2l-dot"></span>Jugando ahora</div><div class="tv2l-cols">${cols}</div></div>`;
+}
+function tv2GruposHTML(cat, grupos){
+  const a = analisisLlave(cat);
+  const cols = grupos.length === 4 ? 2 : Math.min(grupos.length, 3);
+  const sgn = n => (n>0?'+':'')+n;
+  const cards = grupos.map((gr, idx) => {
+    const tb = tabla(cat, gr);
+    const filas = tb.filas.map((f,k) => {
+      const q = tb.cerrada && k < a.pasan;
+      const nq = tb.cerrada && k >= a.pasan;
+      return `<tr class="${q?'q':''}${nq?' nq':''}"><td class="p">${k+1}</td><td class="nm">${esc(nombrePareja(cat,f.i))}</td><td>${f.pj}</td><td>${f.pg}</td><td class="pts">${f.pts}</td><td>${sgn(f.gf-f.gc)}</td></tr>`;
+    }).join('');
+    return `<div class="tv2g-card" style="--cc:${colorCat(cat)};animation-delay:${(0.12+idx*0.09).toFixed(2)}s">
+      <div class="tv2g-head">Grupo ${gr.g}</div>
+      <table class="tv2g-table"><thead><tr><th></th><th></th><th>PJ</th><th>PG</th><th>Pts</th><th>Dif</th></tr></thead><tbody>${filas}</tbody></table>
+    </div>`;
+  }).join('');
+  return `<div class="tv2g-wrap"><div class="tv2l-title tv2g-title">${esc(cat.nom)}</div><div class="tv2g-grid" style="grid-template-columns:repeat(${cols},30vw)">${cards}</div></div>`;
 }
 function tv2Pantallas(){
   const P = [];
@@ -3646,7 +3677,15 @@ function tv2Pantallas(){
   P.push(() => CLUBLOGO2 ? `<img class="tv2-logo" src="${CLUBLOGO2}" alt="">` : '');
   // 2) Partidos en vivo (1 por cancha)
   P.push(tv2LiveHTML);
-  // (se irán agregando: categorías, tablas, marcadores...)
+  // 3) Posiciones: UNA categoría por pantalla (grupos 3x2; si hay >6 grupos, pagina)
+  S.cats.forEach(cat => {
+    const grs = gruposDe(cat) || [];
+    if(!grs.length) return;
+    for(let i=0;i<grs.length;i+=6){
+      const pagina = grs.slice(i, i+6);
+      P.push(() => tv2GruposHTML(cat, pagina));
+    }
+  });
   return P;
 }
 
