@@ -898,7 +898,7 @@ body[data-tab="res"] #config,body[data-tab="res"] #validador,body[data-tab="res"
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">v12.8 · Julio 2026</p>
+    <p class="sig" id="footSig">v12.9 · Julio 2026</p>
   </div>
 </footer>
 
@@ -2414,7 +2414,7 @@ function renderGrilla(){
                   : est === 'atrasado' ? '<span class="est-tag atr">Atrasado</span>' : '';
         tds += `<td${est ? ' class="en-juego"' : ''}><div class="slot${mia ? ' moving' : ''}" style="--cc:${colorCat(x.cat)}">
           <span class="c${x.m.gr ? '' : ' f'}">${esc(x.cat.nom)}</span>${tag}
-          <span class="m"><b>${esc(x.m.id)}</b> · ${esc(x.m.fase)}</span>
+          <span class="m"><b>${esc(x.m.id)}</b> · ${esc(x.m.fase)}${ev.estado === 'ok' ? ' ✓' : ''}</span>
           <span class="duo">${rotuloGrilla(x.cat, x.m)}</span>
         </div></td>`;
       }
