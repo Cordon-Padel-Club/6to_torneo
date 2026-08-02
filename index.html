@@ -898,7 +898,7 @@ body[data-tab="res"] #config,body[data-tab="res"] #validador,body[data-tab="res"
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">v12.9 · Julio 2026</p>
+    <p class="sig" id="footSig">v13.0 · Julio 2026</p>
   </div>
 </footer>
 
@@ -1250,8 +1250,12 @@ function nombreCorto(cat, lado){
   // dependencia sin resolver: forma abreviada (Gan A1, 1º A, etc.)
   if(lado.t === 'g') return 'Gan '+lado.v;
   if(lado.t === 'l') return 'Perd '+lado.v;
-  if(lado.t === 'pos') return lado.n+'º'+lado.g;
-  if(lado.t === 'rep') return 'Mejor '+lado.n+'º';
+  if(lado.t === 'pos'){
+    const aL = analisisLlave(cat);
+    if(aL && aL.byes > 0 && lado.rank) return (lado.rank === 1 ? 'Mejor ' : lado.rank+'º mejor ')+lado.n+'º';
+    return lado.n+'º'+lado.g;
+  }
+  if(lado.t === 'rep') return (lado.k === 0 ? 'Mejor ' : (lado.k+1)+'º mejor ')+lado.n+'º';
   return '—';
 }
 function rotuloGrilla(cat, m){
