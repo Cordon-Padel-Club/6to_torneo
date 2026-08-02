@@ -898,7 +898,7 @@ body[data-tab="res"] #config,body[data-tab="res"] #validador,body[data-tab="res"
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">v13.3 · Julio 2026</p>
+    <p class="sig" id="footSig">v13.4 · Julio 2026</p>
   </div>
 </footer>
 
@@ -1241,8 +1241,9 @@ function nombrePareja(cat, i){
   return (v && v.trim()) ? v.trim() : 'Pareja '+numGlobal(cat,i);
 }
 // nombre compacto para la grilla: nombre cargado, o #número, o el texto de dependencia
-function nombreCorto(cat, lado){
-  const id = resolver(cat, lado);
+function nombreCorto(cat, m, cual){
+  const lado = m[cual];
+  const id = ladoLlave(cat, m, cual);
   if(id !== null && id !== undefined){
     const v = S.nom[claveNom(cat,id)];
     return (v && v.trim()) ? v.trim() : (ROL === 'cliente' ? 'Pareja '+numGlobal(cat,id) : '#'+pad(numGlobal(cat,id)));
@@ -1259,7 +1260,7 @@ function nombreCorto(cat, lado){
   return '—';
 }
 function rotuloGrilla(cat, m){
-  return esc(nombreCorto(cat, m.a)) + ' <span class="vsx">vs</span> ' + esc(nombreCorto(cat, m.b));
+  return esc(nombreCorto(cat, m, 'a')) + ' <span class="vsx">vs</span> ' + esc(nombreCorto(cat, m, 'b'));
 }
 
 /* --- Round robin por método del círculo, para que no se repitan parejas seguidas --- */
@@ -2423,7 +2424,7 @@ function renderGrilla(){
         const x = colMap[c];
         if(!x){ tds += `<td><div class="slot empty">—</div></td>`; continue; }
         const ev = evalPartido(x.cat, x.m);
-        const mia = miPareja && [x.m.a,x.m.b].some(l => miPareja === x.cat.id+':'+resolver(x.cat,l));
+        const mia = miPareja && ['a','b'].some(c => miPareja === x.cat.id+':'+ladoLlave(x.cat,x.m,c));
         const est = vivos.get(x.m.key);
         const tag = est === 'enhora' ? '<span class="est-tag hora">En hora</span>'
                   : est === 'atrasado' ? '<span class="est-tag atr">Atrasado</span>' : '';
@@ -2606,8 +2607,9 @@ function diaDeHoy(){
   return i >= 0 ? i : null;
 }
 
-function ladoNombre(cat, lado){
-  const id = resolver(cat, lado);
+function ladoNombre(cat, m, cual){
+  const lado = m[cual];
+  const id = ladoLlave(cat, m, cual);
   if(id !== null && id !== undefined) return {txt:nombrePareja(cat,id), num:numGlobal(cat,id), id};
   return {txt:textoLado(cat, lado), num:null, id:null};
 }
@@ -2619,7 +2621,7 @@ function ytIconHTML(cancha, cls){
 }
 function tarjetaLive(u, mine){
   const cat = u.cat, m = u.m;
-  const A = ladoNombre(cat, m.a), B = ladoNombre(cat, m.b);
+  const A = ladoNombre(cat, m, 'a'), B = ladoNombre(cat, m, 'b');
   const ev = evalPartido(cat, m);
   const cerrado = ev.estado === 'ok';
   const linea = (L, cual) => {
@@ -2701,7 +2703,7 @@ function renderMiPareja(){
       const u = ubicaciones();
       // todos los partidos donde esta pareja aparece (directo o resoluble)
       const mios = partidosDe(cat).map(m => {
-        const A = resolver(cat, m.a), B = resolver(cat, m.b);
+        const A = ladoLlave(cat, m, 'a'), B = ladoLlave(cat, m, 'b');
         if(A !== idx && B !== idx) return null;
         const loc = u[m.key];
         const ev = evalPartido(cat, m);
@@ -2725,7 +2727,7 @@ function renderMiPareja(){
           : 'Sin próximo partido'}</div></div>
         <div class="mine-list">`;
       mios.forEach(x => {
-        const rival = x.yo === 'a' ? ladoNombre(cat, x.m.b) : ladoNombre(cat, x.m.a);
+        const rival = x.yo === 'a' ? ladoNombre(cat, x.m, 'b') : ladoNombre(cat, x.m, 'a');
         const ev = x.ev;
         const jugado = ev.estado === 'ok';
         const gane = jugado && ev.gan === x.yo;
