@@ -898,7 +898,7 @@ body[data-tab="res"] #config,body[data-tab="res"] #validador,body[data-tab="res"
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </a>
     </div>
-    <p class="sig" id="footSig">v13.2 · Julio 2026</p>
+    <p class="sig" id="footSig">v13.0 · Julio 2026</p>
   </div>
 </footer>
 
@@ -1493,9 +1493,7 @@ let IX = {};   // cat.id -> índice de partidos
 function reindexar(){ IX = {}; S.cats.forEach(c => IX[c.id] = indice(c)); }
 
 function ladoLlave(cat, m, cual){
-  const lado = m[cual];
-  const esRef = lado && (lado.t === 'g' || lado.t === 'l');   // slot que sigue al ganador/perdedor de otro partido
-  if(!esRef && (m.ronda||0) >= 80 && S.fijLlave){             // el override manual solo aplica a slots de entrada (pos/rep)
+  if((m.ronda||0) >= 80 && S.fijLlave){
     const ov = S.fijLlave[cat.id+'-'+m.id+'-'+cual];
     if(ov !== undefined && ov !== null && ov !== '') return +ov;
   }
@@ -2755,11 +2753,6 @@ function bracketHTML(cat, est, u){
   };
   const esOrg = ROL === 'org';
   const selLado = (m, cual) => {
-    const lado = m[cual];
-    if(lado && (lado.t === 'g' || lado.t === 'l')){   // slot de ganador/perdedor: avanza solo, sin desplegable
-      const auto = resolver(cat, lado);
-      return `<span class="lv-nm">${esc(auto != null ? nombrePareja(cat, auto) : (textoLado(cat, lado) || '\u2014'))}</span>`;
-    }
     const key = cat.id+'-'+m.id+'-'+cual;
     const ov = S.fijLlave && S.fijLlave[key];
     const tieneOv = ov !== undefined && ov !== null && ov !== '';
